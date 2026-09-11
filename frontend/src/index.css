@@ -165,3 +165,103 @@ body {
     radial-gradient(900px 600px at -10% 110%, oklch(0.35 0.09 260 / 0.2), transparent 70%);
   background-attachment: fixed;
 }
+
+/* --- Journal editor (TipTap) --- */
+.ProseMirror {
+  outline: none;
+  min-height: 340px;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.ProseMirror > * + * {
+  margin-top: 0.6em;
+}
+.ProseMirror h1 { font-size: 1.5rem; font-weight: 650; letter-spacing: -0.01em; }
+.ProseMirror h2 { font-size: 1.25rem; font-weight: 650; }
+.ProseMirror h3 { font-size: 1.05rem; font-weight: 600; }
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  opacity: 0.6;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+.ProseMirror blockquote {
+  border-left: 3px solid var(--color-primary);
+  background: color-mix(in oklch, var(--color-primary) 7%, transparent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 0.4rem 0.75rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+.ProseMirror ul { padding-left: 1.25rem; list-style: disc; }
+.ProseMirror ol { padding-left: 1.25rem; list-style: decimal; }
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.125rem;
+}
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+.ProseMirror ul[data-type="taskList"] li > label {
+  margin-top: 0.3rem;
+  flex-shrink: 0;
+}
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.ProseMirror pre {
+  background: oklch(1 0 0 / 6%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  overflow-x: auto;
+}
+.ProseMirror pre code { background: none; padding: 0; }
+.ProseMirror code {
+  background: oklch(1 0 0 / 8%);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 0.85em;
+}
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0;
+}
+.ProseMirror p:first-child { margin-top: 0; }
+
+/* slash command popup */
+.slash-menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--color-popover);
+  color: var(--color-popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+  padding: 4px;
+}
+.slash-menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.slash-menu-item.selected { background: var(--color-accent); }
+.slash-menu-hint { font-size: 0.72rem; color: var(--muted-foreground); }
+.slash-menu-empty { padding: 8px 10px; font-size: 0.85rem; color: var(--muted-foreground); }

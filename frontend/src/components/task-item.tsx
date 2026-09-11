@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useCreateTask, useDeleteTask, useUpdateTask } from "@/hooks/api"
+import { useFocusTimer } from "@/stores/timer"
 import { formatDue, formatDuration, parseUTC, toISO, startOfDay } from "@/lib/dates"
 import type { Priority, Task } from "@/api/types"
 import { cn } from "cn"
@@ -99,6 +100,16 @@ function TaskMenu({ task, lists }: { task: Task; lists: { id: string; name: stri
         <MoreHorizontal />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
+        {task.status !== "completed" && (
+          <DropdownMenuItem
+            onClick={() => {
+              useFocusTimer.setState({ taskId: task.id, open: true })
+              useFocusTimer.getState().start()
+            }}
+          >
+            <Timer className="size-4" /> Focus on this
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Priority</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>

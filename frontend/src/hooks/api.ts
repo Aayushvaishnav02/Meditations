@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { api } from "@/api/client"
-import type { Task, TaskInput, TaskList } from "@/api/types"
+import { api, ApiError } from "@/api/client"
+import type { JournalActivity, JournalEntry, JournalInput, Task, TaskInput, TaskList } from "@/api/types"
 
 export const qk = {
   tasks: ["tasks"] as const,
@@ -106,6 +106,66 @@ export function useDeleteTask() {
       toast.error("Couldn't delete task")
     },
     onSettled: () => qc.invalidateQueries({ queryKey: qk.tasks }),
+  })
+}
+
+export function useCreateSession() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { task_id?: string | null; duration_minutes: number; session_type?: string }) =>
+      api.post<Task>("/focus/sessions", input),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: qk.tasks })
+      qc.invalidateQueries({ queryKey: ["focus-summary"] })
+    },
+  })
+}
+
+export function useJournalEntry(day: string) {
+  return useQuery({
+    queryKey: ["journal", day],
+    queryFn: async () => {
+      try {
+        return await api.get<JournalEntry>(`/journal/${day}`)
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) return null // empty entry, not an error
+        throw e
+      }
+    },
+  })
+}
+
+export function useSaveJournal() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: JournalInput & { day: string }) =>
+      api.put<JournalEntry>(`/journal/${input.day}`, { raw_markdown: input.raw_markdown, mood: input.mood ?? null, energy: input.energy ?? null }),
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: ["journal", input.day] })
+      const prev = qc.getQueryData<JournalEntry>(["journal", input.day])
+      if (prev) {
+        qc.setQueryData<JournalEntry>(["journal", input.day], {
+          ...prev,
+          raw_markdown: input.raw_markdown,
+          mood: input.mood ?? null,
+          energy: input.energy ?? null,
+          updated_at: new Date().toISOString(),
+        })
+      }
+      return { prev }
+    },
+    onError: (_err, input, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["journal", input.day], ctx.prev)
+      toast.error("Couldn't save journal entry")
+    },
+    onSettled: (_d, _e, input) => qc.invalidateQueries({ queryKey: ["journal", input.day] }),
+  })
+}
+
+export function useJournalActivity(day: string) {
+  return useQuery({
+    queryKey: ["journal-activity", day],
+    queryFn: () => api.get<JournalActivity>(`/journal/${day}/activity`),
   })
 }
 

@@ -48,6 +48,44 @@ export interface FocusSummary {
   sessions: number
 }
 
+export interface JournalEntry {
+  date: string // YYYY-MM-DD
+  raw_markdown: string
+  mood: number | null
+  energy: number | null
+  hours_deep_work: number
+  tasks_planned: number
+  tasks_done: number
+  created_at: string
+  updated_at: string
+}
+
+export interface JournalInput {
+  raw_markdown: string
+  mood?: number | null
+  energy?: number | null
+}
+
+export interface ActivityTask {
+  id: string
+  title: string
+}
+
+export interface ActivityHabit {
+  id: string
+  name: string
+  completed: boolean
+}
+
+export interface JournalActivity {
+  date: string
+  tasks_done: ActivityTask[]
+  tasks_planned: number
+  focus_minutes: number
+  focus_sessions: number
+  habits: ActivityHabit[]
+}
+
 export const LIST_COLORS = [
   "#8b5cf6",
   "#6366f1",
