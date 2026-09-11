@@ -86,6 +86,22 @@ export interface JournalActivity {
   habits: ActivityHabit[]
 }
 
+export interface SearchHit {
+  doc_id: string
+  kind: "journal" | "weekly" | "monthly"
+  title: string
+  date: string
+  excerpt: string
+  score: number
+  sources: string[]
+}
+
+export interface SearchStatus {
+  fts: boolean
+  semantic: boolean
+  indexed_docs: number
+}
+
 export const LIST_COLORS = [
   "#8b5cf6",
   "#6366f1",

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { BookOpen, CalendarClock, CalendarDays, CheckCircle2, Inbox, ListTodo, Plus, X } from "lucide-react"
+import { BookOpen, Brain, CalendarClock, CalendarDays, CheckCircle2, Inbox, ListTodo, Plus, X } from "lucide-react"
 import { useUi, type SmartView } from "@/stores/ui"
 import { useCreateList, useDeleteList, useHealth, useLists, useTasks } from "@/hooks/api"
 import { groupOf } from "@/lib/dates"
@@ -158,6 +158,10 @@ export function Sidebar() {
         <ScopeButton active={section === "journal"} onClick={() => setSection("journal")}>
           <BookOpen className="size-4 shrink-0" />
           Journal
+        </ScopeButton>
+        <ScopeButton active={section === "second_brain"} onClick={() => setSection("second_brain")}>
+          <Brain className="size-4 shrink-0" />
+          Second brain
         </ScopeButton>
         <div className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground/70 uppercase">
           Tasks

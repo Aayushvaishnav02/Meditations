@@ -85,7 +85,8 @@ function RatingRow({
 
 export function JournalView() {
   const section = useUi((s) => s.section)
-  const [day, setDay] = useState(() => toDayParam(new Date()))
+  const journalDay = useUi((s) => s.journalDay)
+  const [day, setDay] = useState(() => journalDay ?? toDayParam(new Date()))
   const [mood, setMood] = useState<number | null>(null)
   const [energy, setEnergy] = useState<number | null>(null)
 
@@ -141,6 +142,14 @@ export function JournalView() {
     setMood(entry.data?.mood ?? null)
     setEnergy(entry.data?.energy ?? null)
   }, [day, entry.data])
+
+  // arriving from Second Brain: jump to the requested day (consumed once)
+  useEffect(() => {
+    if (journalDay && journalDay !== day) {
+      setDay(journalDay)
+      useUi.setState({ journalDay: null })
+    }
+  }, [journalDay, day])
 
   // load stored markdown once per day
   useEffect(() => {
