@@ -12,6 +12,7 @@ from app.models import DailyScore, JournalEntry, MonthlySummary, Task, WeeklySum
 from app.routers.deps import SessionDep
 from app.routers.scores import DailyScoreResponse
 from app.scoring import ScoreBreakdown, compute_daily_score
+from app.search import index_document
 from app.telemetry import collect_daily_metrics
 from app.util import monday_of, new_id, utc_now
 
@@ -196,6 +197,13 @@ async def rollup_weekly(session: SessionDep, week_start: dt.date | None = None):
     session.add(week)
     await session.commit()
     await session.refresh(week)
+    await index_document(
+        session,
+        f"weekly:{week.week_start.isoformat()}",
+        "weekly",
+        "\n".join(filter(None, [week.wins, week.misses, week.carried_action_items])),
+    )
+    await session.commit()
     return week
 
 
@@ -256,6 +264,8 @@ async def rollup_monthly(session: SessionDep, month: str | None = Query(default=
     session.add(row)
     await session.commit()
     await session.refresh(row)
+    await index_document(session, f"monthly:{row.month}", "monthly", row.narrative)
+    await session.commit()
     return row
 
 

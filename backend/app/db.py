@@ -33,10 +33,24 @@ def init_engine(db_url: str) -> AsyncEngine:
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.close()
+        _load_vec_extension(dbapi_connection)
 
     _engine = engine
     _sessionmaker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     return engine
+
+
+def _load_vec_extension(dbapi_connection) -> None:  # noqa: ANN001
+    """Load sqlite-vec on each pooled connection; degrade silently if unavailable."""
+    try:
+        import sqlite_vec
+
+        conn = dbapi_connection.driver_connection  # aiosqlite.Connection
+        dbapi_connection.await_(conn.enable_load_extension(True))
+        dbapi_connection.await_(conn.load_extension(sqlite_vec.loadable_path()))
+        dbapi_connection.await_(conn.enable_load_extension(False))
+    except Exception:  # noqa: BLE001 — search degrades to FTS-only
+        pass
 
 
 def engine_initialized() -> bool:
@@ -62,9 +76,11 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 
 async def init_db() -> None:
     from app import models  # noqa: F401  (registers tables on the metadata)
+    from app import search
 
     async with get_engine().begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+        await search.init_search(conn)
 
 
 async def dispose_engine() -> None:
