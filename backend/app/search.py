@@ -170,6 +170,31 @@ async def reindex(session: AsyncSession) -> dict:
     return {"indexed": count, "semantic": bool(_vec_ready and _embed_model())}
 
 
+async def backfill_missing(session: AsyncSession) -> int:
+    """Index source documents missing from FTS (e.g. written before the search
+    feature existed). Idempotent; runs at startup. Vector backfill for docs
+    indexed before the embedding model was available happens via reindex."""
+    count = 0
+    sources: list[tuple[str, str, str]] = [
+        (journal_doc_id(e.date), "journal", e.raw_markdown)
+        for e in (await session.exec(select(JournalEntry))).all()
+    ]
+    sources += [
+        (f"weekly:{w.week_start.isoformat()}", "weekly", "\n".join(filter(None, [w.wins, w.misses, w.carried_action_items])))
+        for w in (await session.exec(select(WeeklySummary))).all()
+    ]
+    sources += [(f"monthly:{m.month}", "monthly", m.narrative) for m in (await session.exec(select(MonthlySummary))).all()]
+
+    for doc_id, kind, content in sources:
+        exists = (await _execute(session, "SELECT 1 FROM fts_entries WHERE doc_id = :d LIMIT 1", {"d": doc_id})).first()
+        if exists is None:
+            await index_document(session, doc_id, kind, content)
+            count += 1
+    if count:
+        await session.commit()
+    return count
+
+
 async def search(session: AsyncSession, q: str, limit: int = 20) -> list[SearchHit]:
     if not q.strip():
         return []
@@ -180,7 +205,7 @@ async def search(session: AsyncSession, q: str, limit: int = 20) -> list[SearchH
     fts_rows = (
         await _execute(
             session,
-            "SELECT doc_id, snippet(fts_entries, 0, '[', ']', '…', 16) AS snip"
+            "SELECT doc_id, snippet(fts_entries, 0, '', '', '…', 16) AS snip"
             " FROM fts_entries WHERE fts_entries MATCH :q ORDER BY bm25(fts_entries) LIMIT :n",
             {"q": match_expr, "n": limit},
         )

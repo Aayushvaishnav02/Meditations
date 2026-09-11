@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Brain, BookOpen, CalendarRange } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -13,9 +13,18 @@ const KIND_META: Record<SearchHit["kind"], { label: string; icon: typeof BookOpe
   monthly: { label: "Month", icon: CalendarRange },
 }
 
-/** Render the FTS snippet with [highlight] markers as <mark>. */
-function Excerpt({ text }: { text: string }) {
-  const parts = text.split(/[\[\]]/)
+/** Highlight query words client-side — robust against brackets/markdown in content. */
+function Excerpt({ text, query }: { text: string; query: string }) {
+  const parts = useMemo(() => {
+    const words = query
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 1)
+      .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    if (words.length === 0) return [text]
+    return text.split(new RegExp(`(${words.join("|")})`, "gi"))
+  }, [text, query])
+
   return (
     <p className="text-sm leading-relaxed text-muted-foreground">
       {parts.map((part, i) =>
@@ -52,7 +61,7 @@ export function SecondBrain() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-5">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pt-5 min-h-0">
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-semibold tracking-tight">Second brain</h1>
         <span className="ml-auto text-xs text-muted-foreground">
@@ -80,6 +89,10 @@ export function SecondBrain() {
           <p className="pt-16 text-center text-sm text-muted-foreground">
             Search across your journals, weekly rollups and monthly reviews.
           </p>
+        ) : results.isError ? (
+          <p className="pt-16 text-center text-sm text-red-400">
+            Search failed — is the backend running?
+          </p>
         ) : results.isPending ? (
           <p className="pt-16 text-center text-sm text-muted-foreground">Searching…</p>
         ) : (results.data ?? []).length === 0 ? (
@@ -96,16 +109,16 @@ export function SecondBrain() {
                   hit.kind === "journal" ? "hover:ring-1 hover:ring-primary/40" : "cursor-default",
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <meta.icon className="size-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{hit.title}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-sm font-medium">{hit.title}</span>
                   <Badge variant="outline" className="ml-auto text-[10px] text-muted-foreground">
                     {meta.label}
                     {hit.sources.includes("semantic") && " · ✨ semantic"}
                   </Badge>
                 </div>
                 <div className="mt-1.5">
-                  <Excerpt text={hit.excerpt} />
+                  <Excerpt text={hit.excerpt} query={query} />
                 </div>
               </button>
             )

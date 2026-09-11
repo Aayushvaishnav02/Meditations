@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func
 from sqlmodel import SQLModel, select
 
@@ -45,17 +45,61 @@ async def _get_entry_or_404(session: SessionDep, day: date) -> JournalEntry:
     return entry
 
 
+
+class JournalDay(SQLModel):
+    date: date
+    mood: int | None
+    energy: int | None
+
+
+# NOTE: static route must be declared before /{day} (FastAPI matches in order).
+@router.get("/days", response_model=list[JournalDay])
+async def list_entry_days(
+    session: SessionDep,
+    start: date = Query(alias="from"),
+    end: date = Query(alias="to"),
+):
+    """Days that have journal entries in [from, to], with mood/energy for the
+    journal calendar dots."""
+    rows = (
+        await session.exec(
+            select(JournalEntry)
+            .where(JournalEntry.date >= start, JournalEntry.date <= end)
+            .order_by(JournalEntry.date.desc())
+        )
+    ).all()
+    return [
+        JournalDay(date=e.date, mood=e.mood, energy=e.energy)
+        for e in rows
+        if e.raw_markdown.strip() or e.mood is not None or e.energy is not None
+    ]
+
+
 @router.get("/{day}", response_model=JournalEntry)
 async def get_entry(day: date, session: SessionDep):
     return await _get_entry_or_404(session, day)
 
 
-@router.put("/{day}", response_model=JournalEntry)
+@router.put("/{day}")
 async def upsert_entry(day: date, payload: JournalUpsert, session: SessionDep):
     """Create or update the entry for a day; telemetry fields are snapshotted
     server-side (hours_deep_work, tasks_planned/done) so the client cannot
-    drift from the recorded sessions."""
-    entry = await session.get(JournalEntry, day)
+    drift from the recorded sessions.
+
+    Invariant: an entry must carry text, a mood or an energy rating. A fully
+    empty save is refused (and deletes an existing emptied entry) so no client
+    — including stale frontends — can pollute the journal or search index."""
+    has_content = bool(payload.raw_markdown.strip()) or payload.mood is not None or payload.energy is not None
+    existing = await session.get(JournalEntry, day)
+
+    if not has_content:
+        if existing is not None:
+            await remove_document(session, journal_doc_id(day))
+            await session.delete(existing)
+            await session.commit()
+        return {"saved": False}
+
+    entry = existing
     if entry is None:
         entry = JournalEntry(date=day, raw_markdown=payload.raw_markdown, mood=payload.mood, energy=payload.energy)
     else:
@@ -74,7 +118,7 @@ async def upsert_entry(day: date, payload: JournalUpsert, session: SessionDep):
     await session.refresh(entry)
     await index_document(session, journal_doc_id(day), "journal", entry.raw_markdown)
     await session.commit()
-    return entry
+    return {"saved": True, **JournalEntry.model_validate(entry).model_dump(mode="json")}
 
 
 @router.delete("/{day}", status_code=204)

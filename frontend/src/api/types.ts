@@ -60,6 +60,12 @@ export interface JournalEntry {
   updated_at: string
 }
 
+export interface JournalDay {
+  date: string
+  mood: number | null
+  energy: number | null
+}
+
 export interface JournalInput {
   raw_markdown: string
   mood?: number | null
@@ -94,6 +100,95 @@ export interface SearchHit {
   excerpt: string
   score: number
   sources: string[]
+}
+
+export interface AISettingsView {
+  provider: string
+  model_name: string
+  base_url: string | null
+  api_key_set: boolean
+}
+
+export interface AIConnectionTest {
+  ok: boolean
+  model: string
+  reply: string | null
+  latency_ms: number | null
+  error: string | null
+}
+
+export interface AppPrefs {
+  target_deep_work_hours: number
+}
+
+export interface DailyScoreResponse {
+  date: string
+  task_score: number
+  focus_score: number
+  habit_score: number
+  weighted_score: number
+  llm_nudge: number
+  final_score: number
+  target_deep_work_hours: number
+  metrics: {
+    tasks_completed: number
+    tasks_planned: number
+    deep_work_hours: number
+    habits_completed: number
+    habits_scheduled: number
+  }
+  persisted: boolean
+  feedback: string | null
+  insight: string | null
+}
+
+export interface Briefing {
+  top_focus: string[]
+  reasoning: string
+  overdue_count: number
+  due_today_count: number
+}
+
+export interface CaptureResult {
+  tasks: Task[]
+  journal_snippet: string
+}
+
+export interface InsightDay {
+  date: string
+  score: number
+  tasks_completed: number
+  tasks_planned: number
+  deep_work_hours: number
+  habits_completed: number
+  habits_scheduled: number
+  mood: number | null
+  energy: number | null
+}
+
+export interface HabitInsight {
+  id: string
+  name: string
+  current_streak: number
+  rate_30: number
+}
+
+export interface InsightsResponse {
+  days: number
+  series: InsightDay[]
+  journaling_streak: number
+  journaling_best: number
+  habits: HabitInsight[]
+  weekly: { week_start: string; avg_score: number; trend: string }[]
+  monthly: { month: string; avg_score: number; trend: string }[]
+  totals: {
+    avg_score_7: number
+    avg_score_prev_7: number | null
+    total_focus_hours: number
+    tasks_done: number
+    completion_rate: number
+    target_deep_work_hours: number
+  }
 }
 
 export interface SearchStatus {

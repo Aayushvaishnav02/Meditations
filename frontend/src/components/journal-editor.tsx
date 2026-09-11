@@ -5,11 +5,16 @@ import { Placeholder } from "@tiptap/extensions"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { Markdown } from "tiptap-markdown"
 import { Check, ChevronLeft, ChevronRight, ListChecks, Sparkles } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { MiniMonth } from "@/components/journal-calendar"
+import { JournalCalendar } from "@/components/journal-calendar-view"
+import { DailyReviewCard } from "@/components/daily-review-card"
 import { Button } from "@/components/ui/button"
-import { useJournalActivity, useJournalEntry, useSaveJournal } from "@/hooks/api"
+import { useJournalActivity, useJournalDays, useJournalEntry, useSaveJournal } from "@/hooks/api"
 import { SlashCommands } from "@/components/slash-command"
 import { formatDuration } from "@/lib/dates"
 import { useUi } from "@/stores/ui"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { cn } from "cn"
 import type { Editor } from "@tiptap/core"
@@ -73,7 +78,7 @@ function RatingRow({
               "size-5 rounded-full border transition-all",
               value !== null && n <= value
                 ? "border-primary bg-primary/70"
-                : "border-white/15 hover:border-white/40",
+                : "border-[var(--glass-border)] hover:border-primary/40",
               value === n && "ring-2 ring-primary/50",
             )}
           />
@@ -93,8 +98,13 @@ export function JournalView() {
   const entry = useJournalEntry(day)
   const save = useSaveJournal()
   const activity = useJournalActivity(day)
+  const daysData = useJournalDays("2000-01-01", "2099-12-31", section === "journal").data
 
   const [loadedDay, setLoadedDay] = useState<string | null>(null)
+  const [openPopover, setOpenPopover] = useState(false)
+  const [mode, setMode] = useState<"editor" | "calendar">("editor")
+  // markdown baseline after the last load: setContent-driven updates must not re-save
+  const baselineMdRef = useRef<string>("")
   const saveTimer = useRef<number | null>(null)
   // payload frozen at schedule time so a day switch can never redirect it
   const pendingSave = useRef<{ day: string; md: string; mood: number | null; energy: number | null } | null>(null)
@@ -106,6 +116,7 @@ export function JournalView() {
   energyRef.current = energy
   const saveRef = useRef(save)
   saveRef.current = save
+  const queryClient = useQueryClient()
 
   const editor = useEditor({
     extensions: [
@@ -124,9 +135,22 @@ export function JournalView() {
     onUpdate: ({ editor }) => scheduleSave(editor),
   })
 
-  function scheduleSave(ed: NonNullable<ReturnType<typeof useEditor>>) {
+  function scheduleSave(
+    ed: NonNullable<ReturnType<typeof useEditor>>,
+    force = false,
+    overrides?: { mood?: number | null; energy?: number | null },
+  ) {
+    const md = getMarkdown(ed)
+    if (!force && md === baselineMdRef.current) return // programmatic setContent, not a user edit
     if (saveTimer.current) window.clearTimeout(saveTimer.current)
-    pendingSave.current = { day, md: getMarkdown(ed), mood: moodRef.current, energy: energyRef.current }
+    // React state updates are async: a rating click must pass its new value in
+    // explicitly — moodRef/energyRef still hold the previous render's value here.
+    pendingSave.current = {
+      day,
+      md,
+      mood: overrides && "mood" in overrides ? (overrides.mood ?? null) : moodRef.current,
+      energy: overrides && "energy" in overrides ? (overrides.energy ?? null) : energyRef.current,
+    }
     saveTimer.current = window.setTimeout(flushSave, 700)
   }
 
@@ -136,14 +160,16 @@ export function JournalView() {
     saveTimer.current = null
     const pending = pendingSave.current
     pendingSave.current = null
-    if (pending) {
-      saveRef.current.mutate({
-        day: pending.day,
-        raw_markdown: pending.md,
-        mood: pending.mood,
-        energy: pending.energy,
-      })
-    }
+    if (!pending) return
+    // never create empty entries: visiting a day must not pollute the journal
+    const hasContent = pending.md.trim() || pending.mood !== null || pending.energy !== null
+    if (!hasContent && queryClient.getQueryData(["journal", pending.day]) === null) return
+    saveRef.current.mutate({
+      day: pending.day,
+      raw_markdown: pending.md,
+      mood: pending.mood,
+      energy: pending.energy,
+    })
   }
 
   // pull day switch + rating changes into the next save
@@ -167,6 +193,7 @@ export function JournalView() {
     if (entry.data === undefined) return // still loading
     const md = entry.data?.raw_markdown ?? ""
     editor.commands.setContent(md)
+    baselineMdRef.current = getMarkdown(editor)
     setLoadedDay(day)
   }, [editor, entry.data, day, loadedDay])
 
@@ -210,12 +237,34 @@ export function JournalView() {
   if (section !== "journal") return null
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-5">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pt-5 min-h-0">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon-sm" onClick={() => shiftDay(-1)} aria-label="Previous day">
           <ChevronLeft />
         </Button>
-        <h1 className="text-lg font-semibold tracking-tight">{dateLabel}</h1>
+        <Popover open={openPopover} onOpenChange={setOpenPopover}>
+          <PopoverTrigger
+            render={
+              <button
+                className="rounded-lg px-2 py-1 text-lg font-semibold tracking-tight transition-colors hover:bg-accent"
+                aria-label="Browse journal days"
+              />
+            }
+          >
+            {dateLabel}
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-3">
+            <MiniMonth
+              entries={daysData ?? []}
+              selected={day}
+              onSelect={(d) => {
+                flushSave()
+                setDay(d)
+                setOpenPopover(false)
+              }}
+            />
+          </PopoverContent>
+        </Popover>
         <Button variant="ghost" size="icon-sm" onClick={() => shiftDay(1)} aria-label="Next day">
           <ChevronRight />
         </Button>
@@ -229,7 +278,7 @@ export function JournalView() {
             "Saving…"
           ) : save.isError ? (
             <span className="text-red-400">Save failed</span>
-          ) : save.data ? (
+          ) : save.data?.saved === true ? (
             <span className="flex items-center gap-1">
               <Check className="size-3 text-emerald-400" /> Saved
             </span>
@@ -237,13 +286,57 @@ export function JournalView() {
         </div>
       </div>
 
+      <div className="mt-3 flex items-center gap-0.5 self-start rounded-lg border border-[var(--glass-border)] p-0.5">
+        {(["editor", "calendar"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={cn(
+              "rounded-md px-3 py-1 text-xs capitalize transition-colors",
+              mode === m ? "bg-primary/20 text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+
+      {mode === "calendar" ? (
+        <div className="mt-3">
+          <JournalCalendar
+            selected={day}
+            onSelect={(d) => {
+              flushSave()
+              setDay(d)
+              setMode("editor")
+            }}
+          />
+        </div>
+      ) : (
+      <>
       <div className="glass mt-3 flex flex-col gap-2 rounded-2xl px-4 py-3">
-        <RatingRow label="Mood" value={mood} onChange={(v) => { setMood(v); if (editor) scheduleSave(editor) }} />
-        <RatingRow label="Energy" value={energy} onChange={(v) => { setEnergy(v); if (editor) scheduleSave(editor) }} />
+        <RatingRow
+          label="Mood"
+          value={mood}
+          onChange={(v) => {
+            setMood(v)
+            if (editor) scheduleSave(editor, true, { mood: v })
+          }}
+        />
+        <RatingRow
+          label="Energy"
+          value={energy}
+          onChange={(v) => {
+            setEnergy(v)
+            if (editor) scheduleSave(editor, true, { energy: v })
+          }}
+        />
       </div>
       <div className="glass mt-3 rounded-2xl px-5 py-4">
         <EditorContent editor={editor} />
       </div>
+
+      <DailyReviewCard day={day} />
 
       <div className="mt-3 flex items-center gap-2 pb-8 text-xs">
         <Button variant="outline" size="xs" onClick={() => void insertActivity()}>
@@ -259,6 +352,8 @@ export function JournalView() {
           </span>
         )}
       </div>
+      </>
+      )}
     </main>
   )
 }

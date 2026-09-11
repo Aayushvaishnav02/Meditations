@@ -7,7 +7,19 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import db
 from app.config import get_app_settings
-from app.routers import agents, ai_settings, focus, habits, journal, lists, scores, search, tasks
+from app.routers import (
+    agents,
+    ai_settings,
+    focus,
+    habits,
+    insights,
+    journal,
+    lists,
+    preferences,
+    scores,
+    search,
+    tasks,
+)
 
 
 @asynccontextmanager
@@ -16,6 +28,10 @@ async def lifespan(_: FastAPI):
         settings = get_app_settings()
         db.init_engine(f"sqlite+aiosqlite:///{settings.journal_db_path}")
     await db.init_db()
+    from app import search
+
+    async with db.get_sessionmaker()() as session:
+        await search.backfill_missing(session)  # index docs written pre-search
     yield
     await db.dispose_engine()
 
@@ -41,6 +57,8 @@ for router in (
     ai_settings.router,
     agents.router,
     search.router,
+    insights.router,
+    preferences.router,
 ):
     app.include_router(router)
 

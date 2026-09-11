@@ -76,3 +76,60 @@ def test_journal_snapshot_survives_later_edits(client):
     client.patch(f"/api/tasks/{task['id']}", json={"status": "completed"})
     client.put(f"/api/journal/{day}", json={"raw_markdown": "updated"})
     assert client.get(f"/api/journal/{day}").json()["tasks_done"] == 1
+
+
+def test_journal_days_listing(client):
+    client.put("/api/journal/2026-08-01", json={"raw_markdown": "one", "mood": 2})
+    client.put("/api/journal/2026-08-15", json={"raw_markdown": "two", "mood": 5, "energy": 4})
+    client.put("/api/journal/2026-09-01", json={"raw_markdown": "   "})  # whitespace-only -> not listed
+
+    r = client.get("/api/journal/days", params={"from": "2026-08-01", "to": "2026-08-31"})
+    assert r.status_code == 200
+    days = r.json()
+    assert [d["date"] for d in days] == ["2026-08-15", "2026-08-01"]  # desc
+    assert days[0] == {"date": "2026-08-15", "mood": 5, "energy": 4}
+
+    # empty window -> empty list
+    assert client.get("/api/journal/days", params={"from": "2030-01-01", "to": "2030-12-31"}).json() == []
+
+
+def test_empty_saves_are_refused(client):
+    """Stale/broken clients must not be able to create blank entries."""
+    r = client.put("/api/journal/2026-09-10", json={"raw_markdown": "   "})
+    assert r.status_code == 200 and r.json()["saved"] is False
+    assert client.get("/api/journal/2026-09-10").status_code == 404  # nothing created
+
+    # mood-only saves still count
+    r = client.put("/api/journal/2026-09-10", json={"raw_markdown": "", "mood": 4})
+    assert r.json()["saved"] is True
+    assert client.get("/api/journal/2026-09-10").status_code == 200
+
+    # clearing an existing entry deletes it (and stays gone on repeat)
+    r = client.put("/api/journal/2026-09-10", json={"raw_markdown": ""})
+    assert r.json()["saved"] is False
+    assert client.get("/api/journal/2026-09-10").status_code == 404
+
+
+def test_startup_backfill_indexes_existing_entries(client, monkeypatch):
+    """Entries written before search existed get indexed on boot."""
+    # insert directly (bypassing the journal route) to simulate pre-search data
+    import asyncio
+    from app import db
+    from app.models import JournalEntry
+
+    async def seed():
+        maker = db.get_sessionmaker()
+        async with maker() as s:
+            s.add(JournalEntry(date=__import__("datetime").date(2026, 5, 5), raw_markdown="pre-search notes about kubernetes"))
+            await s.commit()
+            # wipe only the FTS row to simulate "never indexed"
+            await s.execute(__import__("sqlalchemy").text("DELETE FROM fts_entries"))
+            await s.commit()
+
+    asyncio.run(seed())
+
+    from fastapi.testclient import TestClient
+    from app.main import app  # fresh lifespan -> startup backfill runs
+    with TestClient(app) as fresh_client:
+        hits = fresh_client.get("/api/search", params={"q": "kubernetes"}).json()
+        assert any(h["doc_id"] == "journal:2026-05-05" for h in hits)

@@ -164,7 +164,7 @@ export function FocusTimer() {
           value={timer.taskId ?? ""}
           onChange={(e) => timer.setTask(e.target.value || null)}
           aria-label="Track a task"
-          className="mt-2 w-full rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-muted-foreground outline-none focus:border-primary/50"
+          className="mt-2 w-full rounded-md border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-1 text-xs text-muted-foreground outline-none focus:border-primary/50"
         >
           <option value="">No linked task</option>
           {openTasks.slice(0, 50).map((t) => (

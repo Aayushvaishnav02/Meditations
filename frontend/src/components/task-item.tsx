@@ -221,7 +221,7 @@ export function TaskItem({
     <motion.div layout="position" className="group">
       <div
         className={cn(
-          "flex items-start gap-2.5 rounded-xl border border-transparent px-3 py-2 transition-colors hover:border-white/[0.06] hover:bg-white/[0.03]",
+          "flex items-start gap-2.5 rounded-xl border border-transparent px-3 py-2 transition-colors hover:border-[var(--glass-border)] hover:bg-[var(--glass-hover)]",
         )}
       >
         {children.length > 0 ? (
@@ -313,7 +313,7 @@ export function TaskItem({
       </div>
 
       {expanded ? (
-        <div className="ml-10 border-l border-white/[0.06] pl-3 pb-1">
+        <div className="ml-10 border-l-[var(--glass-border)] pl-3 pb-1">
           {children.map((child) => (
             <TaskItem key={child.id} task={child} children={[]} lists={lists} />
           ))}

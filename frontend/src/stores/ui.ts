@@ -1,9 +1,10 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
-export type MainView = "list" | "board"
+export type MainView = "list" | "board" | "calendar"
+export type Theme = "dark" | "light"
 export type SmartView = "today" | "overdue" | "upcoming" | "all" | "completed"
-export type Section = "tasks" | "journal" | "second_brain"
+export type Section = "tasks" | "journal" | "second_brain" | "insights" | "settings"
 
 export type Scope = { kind: "smart"; id: SmartView } | { kind: "list"; id: string }
 
@@ -14,7 +15,9 @@ interface UiState {
   search: string
   /** consumed once by the journal view when arriving from Second Brain */
   journalDay: string | null
+  theme: Theme
   setSection: (section: Section) => void
+  setTheme: (theme: Theme) => void
   setView: (view: MainView) => void
   setScope: (scope: Scope) => void
   setSearch: (search: string) => void
@@ -29,7 +32,9 @@ export const useUi = create<UiState>()(
       scope: { kind: "smart", id: "today" },
       search: "",
       journalDay: null,
+      theme: "dark",
       setSection: (section) => set({ section }),
+      setTheme: (theme) => set({ theme }),
       setJournalDay: (journalDay) => set({ journalDay }),
       setView: (view) => set({ view }),
       setScope: (scope) => set({ scope, section: "tasks" }),
@@ -37,7 +42,7 @@ export const useUi = create<UiState>()(
     }),
     {
       name: "journal-ui",
-      partialize: (s) => ({ section: s.section, view: s.view, scope: s.scope }),
+      partialize: (s) => ({ section: s.section, view: s.view, scope: s.scope, theme: s.theme }),
     },
   ),
 )

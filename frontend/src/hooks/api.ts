@@ -2,7 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api, ApiError } from "@/api/client"
 import type {
+  AIConnectionTest,
+  Briefing,
+  CaptureResult,
+  DailyScoreResponse,
+  InsightsResponse,
+  AISettingsView,
+  AppPrefs,
   JournalActivity,
+  JournalDay,
   JournalEntry,
   JournalInput,
   SearchHit,
@@ -160,6 +168,132 @@ export function useSearchStatus(enabled: boolean) {
   })
 }
 
+export function useAISettings(enabled: boolean) {
+  return useQuery({ queryKey: ["ai-settings"], queryFn: () => api.get<AISettingsView>("/settings/ai"), enabled })
+}
+
+export function useSaveAISettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { provider: string; model_name: string; base_url: string | null; api_key?: string }) =>
+      api.put<AISettingsView>("/settings/ai", input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai-settings"] })
+      toast.success("AI settings saved")
+    },
+    onError: () => toast.error("Couldn't save AI settings"),
+  })
+}
+
+export function useResetAISettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete<AISettingsView>("/settings/ai"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai-settings"] })
+      toast.success("Reset to env defaults")
+    },
+    onError: () => toast.error("Couldn't reset AI settings"),
+  })
+}
+
+export function useTestAI() {
+  return useMutation({
+    mutationFn: () => api.post<AIConnectionTest>("/settings/ai/test", {}),
+    onError: () => toast.error("Test failed — is the backend running?"),
+  })
+}
+
+export function useAppPrefs(enabled: boolean) {
+  return useQuery({ queryKey: ["app-prefs"], queryFn: () => api.get<AppPrefs>("/settings/app"), enabled })
+}
+
+export function useSaveAppPrefs() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { target_deep_work_hours?: number }) => api.put<AppPrefs>("/settings/app", input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["app-prefs"] }),
+    onError: () => toast.error("Couldn't save preferences"),
+  })
+}
+
+export function useReindex() {
+  return useMutation({
+    mutationFn: () => api.post<{ indexed: number; semantic: boolean }>("/search/reindex", {}),
+    onSuccess: (data) =>
+      toast.success(`Rebuilt index — ${data.indexed} documents`, {
+        description: data.semantic ? "Semantic embeddings refreshed." : "Embedding model unavailable — keyword index only.",
+      }),
+    onError: () => toast.error("Couldn't rebuild the search index"),
+  })
+}
+
+export function useInsights(days: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["insights", days],
+    queryFn: () => api.get<InsightsResponse>(`/insights?days=${days}`),
+    enabled,
+  })
+}
+
+export function useDailyScore(day: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["scores-daily", day],
+    queryFn: () => api.get<DailyScoreResponse>(`/scores/daily/${day}`),
+    enabled,
+  })
+}
+
+export function useDailyRollup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (day: string) => api.post<DailyScoreResponse>(`/agents/rollup/daily?day=${day}`, {}),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["scores-daily", data.date] })
+      qc.invalidateQueries({ queryKey: ["journal-days"] })
+      toast.success(`Daily review saved — score ${data.final_score.toFixed(1)}`)
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "AI review failed"),
+  })
+}
+
+export function useBriefing() {
+  return useMutation({
+    mutationFn: () => api.post<Briefing>("/agents/briefing", {}),
+    onError: (e) =>
+      toast.error("Briefing failed", {
+        description: e instanceof Error && e.message ? e.message : "Is the AI provider reachable?",
+      }),
+  })
+}
+
+export function useCapture() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (text: string) => api.post<CaptureResult>("/agents/capture", { text }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: qk.tasks })
+      qc.invalidateQueries({ queryKey: ["journal"] })
+      qc.invalidateQueries({ queryKey: ["journal-days"] })
+      toast.success(`Captured ${data.tasks.length} task${data.tasks.length === 1 ? "" : "s"}`, {
+        description: data.journal_snippet ? "Snippet added to today's journal." : undefined,
+      })
+    },
+    onError: (e) =>
+      toast.error("Capture failed", {
+        description: e instanceof Error && e.message ? e.message : "Is the AI provider reachable?",
+      }),
+  })
+}
+
+export function useJournalDays(start: string, end: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["journal-days", start, end],
+    queryFn: () => api.get<JournalDay[]>(`/journal/days?from=${start}&to=${end}`),
+    enabled,
+  })
+}
+
 export function useJournalEntry(day: string) {
   return useQuery({
     queryKey: ["journal", day],
@@ -178,7 +312,7 @@ export function useSaveJournal() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: JournalInput & { day: string }) =>
-      api.put<JournalEntry>(`/journal/${input.day}`, { raw_markdown: input.raw_markdown, mood: input.mood ?? null, energy: input.energy ?? null }),
+      api.put<{ saved: boolean } & Partial<JournalEntry>>(`/journal/${input.day}`, { raw_markdown: input.raw_markdown, mood: input.mood ?? null, energy: input.energy ?? null }),
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: ["journal", input.day] })
       const prev = qc.getQueryData<JournalEntry>(["journal", input.day])
@@ -197,7 +331,10 @@ export function useSaveJournal() {
       if (ctx?.prev) qc.setQueryData(["journal", input.day], ctx.prev)
       toast.error("Couldn't save journal entry")
     },
-    onSettled: (_d, _e, input) => qc.invalidateQueries({ queryKey: ["journal", input.day] }),
+    onSettled: (_d, _e, input) => {
+      qc.invalidateQueries({ queryKey: ["journal", input.day] })
+      qc.invalidateQueries({ queryKey: ["journal-days"] })
+    },
   })
 }
 
