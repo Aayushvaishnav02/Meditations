@@ -431,12 +431,12 @@ breakdown_agent = Agent(
 
 ## 8. Implementation Roadmap
 
-### Phase 1: Foundation & Data Layer (Days 1–3) — `feat/backend-data-layer`
-- [ ] Initialize Git repo, `.gitignore`, and Python virtual environment with `uv`.
-- [ ] Implement SQLite schema with SQLModel / SQLAlchemy 2.0.
-- [ ] Build core CRUD endpoints in FastAPI for tasks, subtasks, lists, and focus sessions.
-- [ ] Implement deterministic scoring calculation utility.
-- [ ] Configure `AISettings` supporting custom `base_url` and `api_key`.
+### Phase 1: Foundation & Data Layer (Days 1–3) — `feat/backend-data-layer` ✅ (implemented on branch `feat/backend-data-layer`)
+- [x] Initialize Git repo, `.gitignore`, and Python virtual environment with `uv`.
+- [x] Implement SQLite schema with SQLModel / SQLAlchemy 2.0.
+- [x] Build core CRUD endpoints in FastAPI for tasks, subtasks, lists, and focus sessions.
+- [x] Implement deterministic scoring calculation utility.
+- [x] Configure `AISettings` supporting custom `base_url` and `api_key`.
 
 ### Phase 2: Core Task UI & Natural Language Capture (Days 4–7) — `feat/task-engine-ui`
 - [ ] Set up Vite + React 19 + Tailwind CSS v4 + shadcn/ui.
