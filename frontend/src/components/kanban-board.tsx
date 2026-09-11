@@ -112,7 +112,7 @@ function Column({ status, label, tasks }: { status: TaskStatus; label: string; t
       <div
         ref={setNodeRef}
         className={cn(
-          "flex-1 space-y-2 overflow-y-auto rounded-2xl border border-white/[0.05] bg-white/[0.02] p-2 transition-colors",
+          "flex-1 space-y-2 overflow-y-auto rounded-2xl border-[var(--glass-border)] bg-[var(--glass-hover)] p-2 transition-colors",
           isOver && "border-primary/40 bg-primary/[0.04]",
         )}
       >

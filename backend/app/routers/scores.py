@@ -13,6 +13,7 @@ from app.scoring import (
     ScoreBreakdown,
     compute_daily_score,
 )
+from app.routers.preferences import get_effective_target_hours
 from app.telemetry import collect_daily_metrics
 
 router = APIRouter(prefix="/api/scores", tags=["scores"])
@@ -61,7 +62,7 @@ async def get_daily_score(
     Persistence of daily_scores rows happens with the daily agent (Phase 4).
     """
     metrics = await collect_daily_metrics(session, day)
-    target = target_hours if target_hours is not None else DEFAULT_TARGET_DEEP_WORK_HOURS
+    target = target_hours if target_hours is not None else await get_effective_target_hours(session)
 
     stored = await session.get(DailyScore, day)
     if stored is not None:

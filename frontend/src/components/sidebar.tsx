@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react"
-import { BookOpen, Brain, CalendarClock, CalendarDays, CheckCircle2, Inbox, ListTodo, Plus, X } from "lucide-react"
+import { BookOpen, Brain, CalendarClock, CalendarDays, CheckCircle2, Inbox, ListTodo, Plus, Settings, X } from "lucide-react"
 import { useUi, type SmartView } from "@/stores/ui"
 import { useCreateList, useDeleteList, useHealth, useLists, useTasks } from "@/hooks/api"
 import { groupOf } from "@/lib/dates"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "cn"
 
@@ -139,7 +140,7 @@ export function Sidebar() {
   }, [tasks.data])
 
   return (
-    <aside className="glass flex w-60 shrink-0 flex-col gap-4 border-r border-white/[0.06] p-3">
+    <aside className="glass flex w-60 shrink-0 flex-col gap-4 border-r-[var(--glass-border)] p-3">
       <div className="flex items-center gap-2 px-2 pt-2">
         <div className="flex size-7 items-center justify-center rounded-lg bg-primary/20 text-primary ring-1 ring-primary/40">
           <ListTodo className="size-4" />
@@ -178,6 +179,12 @@ export function Sidebar() {
           </ScopeButton>
         ))}
       </nav>
+
+      <Separator className="opacity-50" />
+      <ScopeButton active={section === "settings"} onClick={() => setSection("settings")}>
+        <Settings className="size-4 shrink-0" />
+        Settings
+      </ScopeButton>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex items-center justify-between px-3 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">

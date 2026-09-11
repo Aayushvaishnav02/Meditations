@@ -1,4 +1,4 @@
-import { List, Search, Columns3 } from "lucide-react"
+import { Calendar, List, Search, Columns3 } from "lucide-react"
 import { useUi } from "@/stores/ui"
 import { useLists } from "@/hooks/api"
 import { Input } from "@/components/ui/input"
@@ -38,6 +38,7 @@ export function Header() {
           [
             { id: "list", icon: List, label: "List view" },
             { id: "board", icon: Columns3, label: "Board view" },
+            { id: "calendar", icon: Calendar, label: "Calendar view" },
           ] as const
         ).map(({ id, icon: Icon, label }) => (
           <button
@@ -51,7 +52,7 @@ export function Header() {
             )}
           >
             <Icon className="size-3.5" />
-            {id === "list" ? "List" : "Board"}
+            {id === "list" ? "List" : id === "board" ? "Board" : "Calendar"}
           </button>
         ))}
       </div>

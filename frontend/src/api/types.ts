@@ -96,6 +96,25 @@ export interface SearchHit {
   sources: string[]
 }
 
+export interface AISettingsView {
+  provider: string
+  model_name: string
+  base_url: string | null
+  api_key_set: boolean
+}
+
+export interface AIConnectionTest {
+  ok: boolean
+  model: string
+  reply: string | null
+  latency_ms: number | null
+  error: string | null
+}
+
+export interface AppPrefs {
+  target_deep_work_hours: number
+}
+
 export interface SearchStatus {
   fts: boolean
   semantic: boolean

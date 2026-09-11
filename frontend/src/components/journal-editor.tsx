@@ -73,7 +73,7 @@ function RatingRow({
               "size-5 rounded-full border transition-all",
               value !== null && n <= value
                 ? "border-primary bg-primary/70"
-                : "border-white/15 hover:border-white/40",
+                : "border-[var(--glass-border)] hover:border-primary/40",
               value === n && "ring-2 ring-primary/50",
             )}
           />

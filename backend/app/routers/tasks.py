@@ -7,9 +7,10 @@ from sqlalchemy import text
 from sqlmodel import func, select
 
 from app.models import Task, TaskList
+from app.recurrence import next_occurrence
 from app.routers.deps import SessionDep
 from app.schemas import TaskCreate, TaskReorder, TaskStatus, TaskUpdate
-from app.util import normalize_dt, utc_now
+from app.util import new_id, normalize_dt, utc_now
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -129,8 +130,9 @@ async def update_task(task_id: str, payload: TaskUpdate, session: SessionDep):
         await _ensure_no_cycle(session, task_id, changes["parent_id"])
 
     new_status = changes.get("status")
+    completing = new_status == "completed" and task.status != "completed"
     if new_status is not None:
-        if new_status == "completed" and task.status != "completed":
+        if completing:
             task.completed_at = utc_now()
         elif new_status != "completed":
             task.completed_at = None
@@ -138,6 +140,29 @@ async def update_task(task_id: str, payload: TaskUpdate, session: SessionDep):
     for key, value in changes.items():
         setattr(task, key, value)
     task.updated_at = utc_now()
+
+    # recurring task completed -> spawn its next occurrence (TickTick-style);
+    # the finished instance stays completed so telemetry/history is preserved
+    if completing and task.recurrence_rule:
+        base = task.due_date or task.completed_at
+        next_due = next_occurrence(task.recurrence_rule, base or utc_now())
+        if next_due is not None:
+            session.add(
+                Task(
+                    id=new_id(),
+                    list_id=task.list_id,
+                    parent_id=task.parent_id,
+                    title=task.title,
+                    description=task.description,
+                    priority=task.priority,
+                    due_date=next_due,
+                    estimated_minutes=task.estimated_minutes,
+                    recurrence_rule=task.recurrence_rule,
+                    tags=task.tags,
+                    order_index=task.order_index + 1000.0,
+                )
+            )
+
     await session.commit()
     await session.refresh(task)
     return task

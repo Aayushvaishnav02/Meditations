@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api, ApiError } from "@/api/client"
 import type {
+  AIConnectionTest,
+  AISettingsView,
+  AppPrefs,
   JournalActivity,
   JournalEntry,
   JournalInput,
@@ -157,6 +160,65 @@ export function useSearchStatus(enabled: boolean) {
     queryKey: ["search-status"],
     queryFn: () => api.get<SearchStatus>("/search/status"),
     enabled,
+  })
+}
+
+export function useAISettings(enabled: boolean) {
+  return useQuery({ queryKey: ["ai-settings"], queryFn: () => api.get<AISettingsView>("/settings/ai"), enabled })
+}
+
+export function useSaveAISettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { provider: string; model_name: string; base_url: string | null; api_key?: string }) =>
+      api.put<AISettingsView>("/settings/ai", input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai-settings"] })
+      toast.success("AI settings saved")
+    },
+    onError: () => toast.error("Couldn't save AI settings"),
+  })
+}
+
+export function useResetAISettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete<AISettingsView>("/settings/ai"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai-settings"] })
+      toast.success("Reset to env defaults")
+    },
+    onError: () => toast.error("Couldn't reset AI settings"),
+  })
+}
+
+export function useTestAI() {
+  return useMutation({
+    mutationFn: () => api.post<AIConnectionTest>("/settings/ai/test", {}),
+  })
+}
+
+export function useAppPrefs(enabled: boolean) {
+  return useQuery({ queryKey: ["app-prefs"], queryFn: () => api.get<AppPrefs>("/settings/app"), enabled })
+}
+
+export function useSaveAppPrefs() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { target_deep_work_hours?: number }) => api.put<AppPrefs>("/settings/app", input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["app-prefs"] }),
+    onError: () => toast.error("Couldn't save preferences"),
+  })
+}
+
+export function useReindex() {
+  return useMutation({
+    mutationFn: () => api.post<{ indexed: number; semantic: boolean }>("/search/reindex", {}),
+    onSuccess: (data) =>
+      toast.success(`Rebuilt index — ${data.indexed} documents`, {
+        description: data.semantic ? "Semantic embeddings refreshed." : "Embedding model unavailable — keyword index only.",
+      }),
+    onError: () => toast.error("Couldn't rebuild the search index"),
   })
 }
 

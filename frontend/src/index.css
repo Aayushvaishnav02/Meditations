@@ -158,11 +158,40 @@
   --sidebar-ring: oklch(0.72 0.15 290 / 55%);
 }
 
+/* --- theme-aware glass surfaces --- */
+:root {
+  --glass-bg: rgb(255 255 255 / 0.65);
+  --glass-border: rgb(0 0 0 / 0.08);
+  --glass-hover: rgb(0 0 0 / 0.04);
+  --glass-card: rgb(255 255 255 / 0.75);
+}
+.dark {
+  --glass-bg: rgb(255 255 255 / 0.04);
+  --glass-border: rgb(255 255 255 / 0.07);
+  --glass-hover: rgb(255 255 255 / 0.04);
+  --glass-card: rgb(255 255 255 / 0.04);
+}
+.glass {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
 body {
   background-color: var(--color-background);
+  background-image: none;
+}
+.dark body {
   background-image:
     radial-gradient(1100px 700px at 85% -10%, oklch(0.4 0.1 295 / 0.28), transparent 70%),
     radial-gradient(900px 600px at -10% 110%, oklch(0.35 0.09 260 / 0.2), transparent 70%);
+  background-attachment: fixed;
+}
+.light body {
+  background-image:
+    radial-gradient(1100px 700px at 85% -10%, oklch(0.9 0.05 295 / 0.5), transparent 70%),
+    radial-gradient(900px 600px at -10% 110%, oklch(0.92 0.05 260 / 0.4), transparent 70%);
   background-attachment: fixed;
 }
 
