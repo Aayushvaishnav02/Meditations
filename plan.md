@@ -456,10 +456,10 @@ breakdown_agent = Agent(
 - [x] Build task decomposition agent and conversational omnibar capture.
 - [x] Set up systemd `.service` and `.timer` files for automated nightly, weekly, and monthly compactions.
 
-### Phase 5: Search, Polish & Desktop Packaging (Days 16–18) — `feat/rag-desktop-polish`
-- [ ] Integrate `sqlite-vec` or `fastembed` for hybrid semantic and keyword search.
-- [ ] Wrap frontend in **Tauri v2** for lightweight Linux desktop tray and system-wide hotkeys.
-- [ ] Implement dark-mode glass styling and fluid Framer Motion transitions.
+### Phase 5: Search, Polish & Desktop Packaging (Days 16–18) — `feat/rag-desktop-polish` ✅ (implemented on branch `feat/rag-desktop-polish`)
+- [x] Integrate `sqlite-vec` or `fastembed` for hybrid semantic and keyword search.
+- [x] Wrap frontend in **Tauri v2** for lightweight Linux desktop tray and system-wide hotkeys.
+- [x] Implement dark-mode glass styling and fluid Framer Motion transitions.
 
 ---
 
