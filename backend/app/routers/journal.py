@@ -80,12 +80,26 @@ async def get_entry(day: date, session: SessionDep):
     return await _get_entry_or_404(session, day)
 
 
-@router.put("/{day}", response_model=JournalEntry)
+@router.put("/{day}")
 async def upsert_entry(day: date, payload: JournalUpsert, session: SessionDep):
     """Create or update the entry for a day; telemetry fields are snapshotted
     server-side (hours_deep_work, tasks_planned/done) so the client cannot
-    drift from the recorded sessions."""
-    entry = await session.get(JournalEntry, day)
+    drift from the recorded sessions.
+
+    Invariant: an entry must carry text, a mood or an energy rating. A fully
+    empty save is refused (and deletes an existing emptied entry) so no client
+    — including stale frontends — can pollute the journal or search index."""
+    has_content = bool(payload.raw_markdown.strip()) or payload.mood is not None or payload.energy is not None
+    existing = await session.get(JournalEntry, day)
+
+    if not has_content:
+        if existing is not None:
+            await remove_document(session, journal_doc_id(day))
+            await session.delete(existing)
+            await session.commit()
+        return {"saved": False}
+
+    entry = existing
     if entry is None:
         entry = JournalEntry(date=day, raw_markdown=payload.raw_markdown, mood=payload.mood, energy=payload.energy)
     else:
@@ -104,7 +118,7 @@ async def upsert_entry(day: date, payload: JournalUpsert, session: SessionDep):
     await session.refresh(entry)
     await index_document(session, journal_doc_id(day), "journal", entry.raw_markdown)
     await session.commit()
-    return entry
+    return {"saved": True, **JournalEntry.model_validate(entry).model_dump(mode="json")}
 
 
 @router.delete("/{day}", status_code=204)

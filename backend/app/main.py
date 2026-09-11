@@ -27,6 +27,10 @@ async def lifespan(_: FastAPI):
         settings = get_app_settings()
         db.init_engine(f"sqlite+aiosqlite:///{settings.journal_db_path}")
     await db.init_db()
+    from app import search
+
+    async with db.get_sessionmaker()() as session:
+        await search.backfill_missing(session)  # index docs written pre-search
     yield
     await db.dispose_engine()
 
