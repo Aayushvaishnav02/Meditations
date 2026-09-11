@@ -180,7 +180,7 @@ async def search(session: AsyncSession, q: str, limit: int = 20) -> list[SearchH
     fts_rows = (
         await _execute(
             session,
-            "SELECT doc_id, snippet(fts_entries, 0, '[', ']', '…', 16) AS snip"
+            "SELECT doc_id, snippet(fts_entries, 0, '', '', '…', 16) AS snip"
             " FROM fts_entries WHERE fts_entries MATCH :q ORDER BY bm25(fts_entries) LIMIT :n",
             {"q": match_expr, "n": limit},
         )

@@ -60,6 +60,12 @@ export interface JournalEntry {
   updated_at: string
 }
 
+export interface JournalDay {
+  date: string
+  mood: number | null
+  energy: number | null
+}
+
 export interface JournalInput {
   raw_markdown: string
   mood?: number | null

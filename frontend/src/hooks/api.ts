@@ -6,6 +6,7 @@ import type {
   AISettingsView,
   AppPrefs,
   JournalActivity,
+  JournalDay,
   JournalEntry,
   JournalInput,
   SearchHit,
@@ -222,6 +223,14 @@ export function useReindex() {
   })
 }
 
+export function useJournalDays(start: string, end: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["journal-days", start, end],
+    queryFn: () => api.get<JournalDay[]>(`/journal/days?from=${start}&to=${end}`),
+    enabled,
+  })
+}
+
 export function useJournalEntry(day: string) {
   return useQuery({
     queryKey: ["journal", day],
@@ -259,7 +268,10 @@ export function useSaveJournal() {
       if (ctx?.prev) qc.setQueryData(["journal", input.day], ctx.prev)
       toast.error("Couldn't save journal entry")
     },
-    onSettled: (_d, _e, input) => qc.invalidateQueries({ queryKey: ["journal", input.day] }),
+    onSettled: (_d, _e, input) => {
+      qc.invalidateQueries({ queryKey: ["journal", input.day] })
+      qc.invalidateQueries({ queryKey: ["journal-days"] })
+    },
   })
 }
 

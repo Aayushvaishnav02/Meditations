@@ -76,3 +76,18 @@ def test_journal_snapshot_survives_later_edits(client):
     client.patch(f"/api/tasks/{task['id']}", json={"status": "completed"})
     client.put(f"/api/journal/{day}", json={"raw_markdown": "updated"})
     assert client.get(f"/api/journal/{day}").json()["tasks_done"] == 1
+
+
+def test_journal_days_listing(client):
+    client.put("/api/journal/2026-08-01", json={"raw_markdown": "one", "mood": 2})
+    client.put("/api/journal/2026-08-15", json={"raw_markdown": "two", "mood": 5, "energy": 4})
+    client.put("/api/journal/2026-09-01", json={"raw_markdown": "   "})  # whitespace-only -> not listed
+
+    r = client.get("/api/journal/days", params={"from": "2026-08-01", "to": "2026-08-31"})
+    assert r.status_code == 200
+    days = r.json()
+    assert [d["date"] for d in days] == ["2026-08-15", "2026-08-01"]  # desc
+    assert days[0] == {"date": "2026-08-15", "mood": 5, "energy": 4}
+
+    # empty window -> empty list
+    assert client.get("/api/journal/days", params={"from": "2030-01-01", "to": "2030-12-31"}).json() == []

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Brain, BookOpen, CalendarRange } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -13,9 +13,18 @@ const KIND_META: Record<SearchHit["kind"], { label: string; icon: typeof BookOpe
   monthly: { label: "Month", icon: CalendarRange },
 }
 
-/** Render the FTS snippet with [highlight] markers as <mark>. */
-function Excerpt({ text }: { text: string }) {
-  const parts = text.split(/[\[\]]/)
+/** Highlight query words client-side — robust against brackets/markdown in content. */
+function Excerpt({ text, query }: { text: string; query: string }) {
+  const parts = useMemo(() => {
+    const words = query
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 1)
+      .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    if (words.length === 0) return [text]
+    return text.split(new RegExp(`(${words.join("|")})`, "gi"))
+  }, [text, query])
+
   return (
     <p className="text-sm leading-relaxed text-muted-foreground">
       {parts.map((part, i) =>
@@ -80,6 +89,10 @@ export function SecondBrain() {
           <p className="pt-16 text-center text-sm text-muted-foreground">
             Search across your journals, weekly rollups and monthly reviews.
           </p>
+        ) : results.isError ? (
+          <p className="pt-16 text-center text-sm text-red-400">
+            Search failed — is the backend running?
+          </p>
         ) : results.isPending ? (
           <p className="pt-16 text-center text-sm text-muted-foreground">Searching…</p>
         ) : (results.data ?? []).length === 0 ? (
@@ -105,7 +118,7 @@ export function SecondBrain() {
                   </Badge>
                 </div>
                 <div className="mt-1.5">
-                  <Excerpt text={hit.excerpt} />
+                  <Excerpt text={hit.excerpt} query={query} />
                 </div>
               </button>
             )

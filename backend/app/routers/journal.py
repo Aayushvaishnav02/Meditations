@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func
 from sqlmodel import SQLModel, select
 
@@ -43,6 +43,36 @@ async def _get_entry_or_404(session: SessionDep, day: date) -> JournalEntry:
     if entry is None:
         raise HTTPException(status_code=404, detail="Journal entry not found")
     return entry
+
+
+
+class JournalDay(SQLModel):
+    date: date
+    mood: int | None
+    energy: int | None
+
+
+# NOTE: static route must be declared before /{day} (FastAPI matches in order).
+@router.get("/days", response_model=list[JournalDay])
+async def list_entry_days(
+    session: SessionDep,
+    start: date = Query(alias="from"),
+    end: date = Query(alias="to"),
+):
+    """Days that have journal entries in [from, to], with mood/energy for the
+    journal calendar dots."""
+    rows = (
+        await session.exec(
+            select(JournalEntry)
+            .where(JournalEntry.date >= start, JournalEntry.date <= end)
+            .order_by(JournalEntry.date.desc())
+        )
+    ).all()
+    return [
+        JournalDay(date=e.date, mood=e.mood, energy=e.energy)
+        for e in rows
+        if e.raw_markdown.strip() or e.mood is not None or e.energy is not None
+    ]
 
 
 @router.get("/{day}", response_model=JournalEntry)
