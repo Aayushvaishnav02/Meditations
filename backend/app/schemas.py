@@ -109,6 +109,16 @@ class HabitLogUpsert(SQLModel):
     completed: bool = True
 
 
+# --- Journal ---
+MoodInt = Annotated[int, Field(ge=1, le=5)]
+
+
+class JournalUpsert(SQLModel):
+    raw_markdown: str
+    mood: MoodInt | None = None
+    energy: MoodInt | None = None
+
+
 # --- AI settings ---
 class AISettingsUpdate(SQLModel):
     provider: str | None = None

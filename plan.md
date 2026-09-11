@@ -444,11 +444,11 @@ breakdown_agent = Agent(
 - [x] Implement Task List and Kanban Board views using `@dnd-kit`.
 - [x] Wire TanStack Query with optimistic updates for instant check-offs.
 
-### Phase 3: Focus Timer & TipTap Journaling (Days 8–11) — `feat/focus-tiptap-journal`
-- [ ] Build Pomodoro / Stopwatch focus tracker with Zustand state.
-- [ ] Implement TipTap rich-text editor for daily journal entries.
-- [ ] Build "Insert Daily Activity" component to embed completed tasks and focus metrics into journal notes.
-- [ ] Store mood/energy ratings.
+### Phase 3: Focus Timer & TipTap Journaling (Days 8–11) — `feat/focus-tiptap-journal` ✅ (implemented on branch `feat/focus-tiptap-journal`)
+- [x] Build Pomodoro / Stopwatch focus tracker with Zustand state.
+- [x] Implement TipTap rich-text editor for daily journal entries.
+- [x] Build "Insert Daily Activity" component to embed completed tasks and focus metrics into journal notes.
+- [x] Store mood/energy ratings.
 
 ### Phase 4: AI Hierarchical Compaction & Agent Workflows (Days 12–15) — `feat/ai-compaction-agents`
 - [ ] Implement PydanticAI agents (`daily_agent`, `weekly_agent`, `monthly_agent`).

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { CalendarClock, CalendarDays, CheckCircle2, Inbox, ListTodo, Plus, X } from "lucide-react"
+import { BookOpen, CalendarClock, CalendarDays, CheckCircle2, Inbox, ListTodo, Plus, X } from "lucide-react"
 import { useUi, type SmartView } from "@/stores/ui"
 import { useCreateList, useDeleteList, useHealth, useLists, useTasks } from "@/hooks/api"
 import { groupOf } from "@/lib/dates"
@@ -78,14 +78,17 @@ function NewListButton() {
 }
 
 function ListRow({ id, name, color, count }: { id: string; name: string; color: string; count: number }) {
+  const section = useUi((s) => s.section)
   const scope = useUi((s) => s.scope)
   const setScope = useUi((s) => s.setScope)
   const deleteList = useDeleteList()
-  const active = scope.kind === "list" && scope.id === id
-
   return (
     <div className="group relative">
-      <ScopeButton active={active} onClick={() => setScope({ kind: "list", id })} count={count}>
+      <ScopeButton
+        active={section === "tasks" && scope.kind === "list" && scope.id === id}
+        onClick={() => setScope({ kind: "list", id })}
+        count={count}
+      >
         <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
         <span className="truncate">{name}</span>
       </ScopeButton>
@@ -109,6 +112,8 @@ function ListRow({ id, name, color, count }: { id: string; name: string; color: 
 }
 
 export function Sidebar() {
+  const section = useUi((s) => s.section)
+  const setSection = useUi((s) => s.setSection)
   const scope = useUi((s) => s.scope)
   const setScope = useUi((s) => s.setScope)
   const lists = useLists()
@@ -150,10 +155,17 @@ export function Sidebar() {
       </div>
 
       <nav className="space-y-0.5">
+        <ScopeButton active={section === "journal"} onClick={() => setSection("journal")}>
+          <BookOpen className="size-4 shrink-0" />
+          Journal
+        </ScopeButton>
+        <div className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-widest text-muted-foreground/70 uppercase">
+          Tasks
+        </div>
         {SMART_VIEWS.map(({ id, label, icon: Icon }) => (
           <ScopeButton
             key={id}
-            active={scope.kind === "smart" && scope.id === id}
+            active={section === "tasks" && scope.kind === "smart" && scope.id === id}
             onClick={() => setScope({ kind: "smart", id })}
             count={counts.smart[id]}
           >
