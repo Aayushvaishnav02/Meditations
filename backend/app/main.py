@@ -12,6 +12,7 @@ from app.routers import (
     ai_settings,
     focus,
     habits,
+    insights,
     journal,
     lists,
     preferences,
@@ -56,6 +57,7 @@ for router in (
     ai_settings.router,
     agents.router,
     search.router,
+    insights.router,
     preferences.router,
 ):
     app.include_router(router)

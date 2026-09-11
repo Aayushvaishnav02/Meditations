@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware"
 export type MainView = "list" | "board" | "calendar"
 export type Theme = "dark" | "light"
 export type SmartView = "today" | "overdue" | "upcoming" | "all" | "completed"
-export type Section = "tasks" | "journal" | "second_brain" | "settings"
+export type Section = "tasks" | "journal" | "second_brain" | "insights" | "settings"
 
 export type Scope = { kind: "smart"; id: SmartView } | { kind: "list"; id: string }
 

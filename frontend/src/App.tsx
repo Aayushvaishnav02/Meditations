@@ -6,6 +6,7 @@ import { BriefingCard } from "@/components/briefing-card"
 import { CalendarView } from "@/components/calendar-view"
 import { KanbanBoard } from "@/components/kanban-board"
 import { QuickAdd } from "@/components/quick-add"
+import { InsightsView } from "@/components/insights"
 import { SecondBrain } from "@/components/second-brain"
 import { SettingsView } from "@/components/settings"
 import { Sidebar } from "@/components/sidebar"
@@ -49,6 +50,8 @@ export default function App() {
         <JournalView />
       ) : section === "second_brain" ? (
         <SecondBrain />
+      ) : section === "insights" ? (
+        <InsightsView />
       ) : section === "settings" ? (
         <SettingsView />
       ) : (

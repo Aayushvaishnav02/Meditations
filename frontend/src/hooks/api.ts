@@ -6,6 +6,7 @@ import type {
   Briefing,
   CaptureResult,
   DailyScoreResponse,
+  InsightsResponse,
   AISettingsView,
   AppPrefs,
   JournalActivity,
@@ -223,6 +224,14 @@ export function useReindex() {
         description: data.semantic ? "Semantic embeddings refreshed." : "Embedding model unavailable — keyword index only.",
       }),
     onError: () => toast.error("Couldn't rebuild the search index"),
+  })
+}
+
+export function useInsights(days: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["insights", days],
+    queryFn: () => api.get<InsightsResponse>(`/insights?days=${days}`),
+    enabled,
   })
 }
 

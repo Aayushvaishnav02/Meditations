@@ -154,6 +154,43 @@ export interface CaptureResult {
   journal_snippet: string
 }
 
+export interface InsightDay {
+  date: string
+  score: number
+  tasks_completed: number
+  tasks_planned: number
+  deep_work_hours: number
+  habits_completed: number
+  habits_scheduled: number
+  mood: number | null
+  energy: number | null
+}
+
+export interface HabitInsight {
+  id: string
+  name: string
+  current_streak: number
+  rate_30: number
+}
+
+export interface InsightsResponse {
+  days: number
+  series: InsightDay[]
+  journaling_streak: number
+  journaling_best: number
+  habits: HabitInsight[]
+  weekly: { week_start: string; avg_score: number; trend: string }[]
+  monthly: { month: string; avg_score: number; trend: string }[]
+  totals: {
+    avg_score_7: number
+    avg_score_prev_7: number | null
+    total_focus_hours: number
+    tasks_done: number
+    completion_rate: number
+    target_deep_work_hours: number
+  }
+}
+
 export interface SearchStatus {
   fts: boolean
   semantic: boolean
