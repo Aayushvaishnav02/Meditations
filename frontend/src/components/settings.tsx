@@ -222,7 +222,8 @@ function AppearanceCard() {
 
 export function SettingsView() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pt-5 pb-10 min-h-0">
+    <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      <div className="mx-auto flex w-full max-w-3xl flex-col px-6 pt-5 pb-10">
       <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
       <div className="mt-4 grid gap-4">
         <AISettingsCard />
@@ -237,6 +238,7 @@ export function SettingsView() {
           <code className="text-foreground">http://127.0.0.1:8000</code>.
         </p>
       </div>
+    </div>
     </main>
   )
 }

@@ -78,7 +78,8 @@ export function InsightsView() {
     }))
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pt-5 pb-10 min-h-0">
+    <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+      <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 pt-5 pb-10">
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-semibold tracking-tight">Insights</h1>
         <div className="glass ml-auto flex items-center gap-0.5 rounded-lg p-0.5">
@@ -215,6 +216,7 @@ export function InsightsView() {
         <Brain className="size-3" /> Run "AI review" in the journal to persist scores with the LLM nudge; everything
         else here is computed deterministically from your telemetry.
       </p>
+    </div>
     </main>
   )
 }

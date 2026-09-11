@@ -61,7 +61,8 @@ export function SecondBrain() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pt-5 min-h-0">
+    <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-5">
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-semibold tracking-tight">Second brain</h1>
         <span className="ml-auto text-xs text-muted-foreground">
@@ -84,7 +85,7 @@ export function SecondBrain() {
         />
       </div>
 
-      <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto pb-8">
+      <div className="mt-4 space-y-2 pb-8">
         {query.length < 2 ? (
           <p className="pt-16 text-center text-sm text-muted-foreground">
             Search across your journals, weekly rollups and monthly reviews.
@@ -125,6 +126,7 @@ export function SecondBrain() {
           })
         )}
       </div>
-    </main>
+    </div>
+  </main>
   )
 }

@@ -310,3 +310,8 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklch, var(--glass-border) 60%, var(--color-foreground));
 }
+
+/* scrollbar sits at the window edge; reserve its width so centered columns don't shift */
+main {
+  scrollbar-gutter: stable;
+}
