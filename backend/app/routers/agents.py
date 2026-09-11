@@ -319,7 +319,9 @@ async def capture(body: CaptureRequest, session: SessionDep):
         if item.due_date:
             try:
                 naive = dt.datetime.fromisoformat(f"{item.due_date}T{item.due_time or '09:00'}")
-                # server runs on the user's machine: naive input == local time
+                # local-first assumption: the server runs on the user's machine,
+                # so naive AI-returned times are interpreted as system-local and
+                # normalized to naive UTC (the storage convention).
                 due_utc = naive.astimezone(dt.timezone.utc).replace(tzinfo=None)
             except ValueError as exc:
                 raise HTTPException(status_code=502, detail=f"AI returned an invalid date: {item.due_date}") from exc
