@@ -61,7 +61,7 @@ export function SecondBrain() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto px-6 pt-5 min-h-0">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pt-5 min-h-0">
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-semibold tracking-tight">Second brain</h1>
         <span className="ml-auto text-xs text-muted-foreground">
@@ -109,9 +109,9 @@ export function SecondBrain() {
                   hit.kind === "journal" ? "hover:ring-1 hover:ring-primary/40" : "cursor-default",
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <meta.icon className="size-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{hit.title}</span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <meta.icon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-sm font-medium">{hit.title}</span>
                   <Badge variant="outline" className="ml-auto text-[10px] text-muted-foreground">
                     {meta.label}
                     {hit.sources.includes("semantic") && " · ✨ semantic"}

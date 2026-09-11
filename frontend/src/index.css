@@ -294,3 +294,19 @@ body {
 .slash-menu-item.selected { background: var(--color-accent); }
 .slash-menu-hint { font-size: 0.72rem; color: var(--muted-foreground); }
 .slash-menu-empty { padding: 8px 10px; font-size: 0.85rem; color: var(--muted-foreground); }
+
+/* thin, subtle scrollbars everywhere */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-border) transparent;
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--glass-border);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--glass-border) 60%, var(--color-foreground));
+}

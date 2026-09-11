@@ -222,7 +222,7 @@ function AppearanceCard() {
 
 export function SettingsView() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto px-6 pt-5 pb-10 min-h-0">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pt-5 pb-10 min-h-0">
       <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
       <div className="mt-4 grid gap-4">
         <AISettingsCard />

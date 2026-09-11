@@ -78,7 +78,7 @@ export function InsightsView() {
     }))
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto px-6 pt-5 pb-10 min-h-0">
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col overflow-y-auto overflow-x-hidden px-6 pt-5 pb-10 min-h-0">
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-semibold tracking-tight">Insights</h1>
         <div className="glass ml-auto flex items-center gap-0.5 rounded-lg p-0.5">
