@@ -438,11 +438,11 @@ breakdown_agent = Agent(
 - [x] Implement deterministic scoring calculation utility.
 - [x] Configure `AISettings` supporting custom `base_url` and `api_key`.
 
-### Phase 2: Core Task UI & Natural Language Capture (Days 4–7) — `feat/task-engine-ui`
-- [ ] Set up Vite + React 19 + Tailwind CSS v4 + shadcn/ui.
-- [ ] Build Quick Add Bar with `chrono-node` for real-time natural language date/priority/tag parsing.
-- [ ] Implement Task List and Kanban Board views using `@dnd-kit`.
-- [ ] Wire TanStack Query with optimistic updates for instant check-offs.
+### Phase 2: Core Task UI & Natural Language Capture (Days 4–7) — `feat/task-engine-ui` ✅ (implemented on branch `feat/task-engine-ui`)
+- [x] Set up Vite + React 19 + Tailwind CSS v4 + shadcn/ui.
+- [x] Build Quick Add Bar with `chrono-node` for real-time natural language date/priority/tag parsing.
+- [x] Implement Task List and Kanban Board views using `@dnd-kit`.
+- [x] Wire TanStack Query with optimistic updates for instant check-offs.
 
 ### Phase 3: Focus Timer & TipTap Journaling (Days 8–11) — `feat/focus-tiptap-journal`
 - [ ] Build Pomodoro / Stopwatch focus tracker with Zustand state.

@@ -24,7 +24,9 @@ app = FastAPI(title="Journal API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "tauri://localhost", "http://tauri.localhost"],
+    allow_origins=["tauri://localhost", "http://tauri.localhost"],
+    # dev servers may drift ports (5173 busy -> 5174, ...); allow any localhost port
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_methods=["*"],
     allow_headers=["*"],
 )
