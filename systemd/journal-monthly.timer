@@ -1,0 +1,10 @@
+[Unit]
+Description=Journal monthly AI rollup (1st, covers previous month)
+
+[Timer]
+OnCalendar=*-*-01 00:05:00
+Persistent=true
+Unit=journal-monthly.service
+
+[Install]
+WantedBy=timers.target

@@ -64,6 +64,43 @@ A component the user has not opted into is **neutral (100), not punitive**: no h
 - `/api/scores/daily/{date}`
 - `/api/settings/ai`
 
+## API surface (Phase 4 — AI agents)
+
+All agent endpoints call the configured provider (env or `PUT /api/settings/ai`).
+Provider failures surface as `502` with the underlying error; everything else is
+deterministic.
+
+- `POST /api/agents/rollup/daily[?day=YYYY-MM-DD]` — daily review agent; persists
+  `daily_scores` (deterministic score + ±10 LLM nudge with rationale, feedback,
+  insight). Bounded inputs: today's raw entry + past 6 days (truncated) + latest
+  weekly/monthly summaries. Requires a journal entry for the day.
+- `POST /api/agents/rollup/weekly[?week_start=YYYY-MM-DD]` — ISO week rollup from
+  daily scores/metadata (raw journals never read again); stores `weekly_summaries`.
+  Defaults to the current week (the timer fires Sunday 23:59).
+- `POST /api/agents/rollup/monthly[?month=YYYY-MM|previous]` — month narrative from
+  that month's weekly rollups; stores `monthly_summaries`. Defaults to the current
+  month, or the previous one on the 1st (when the timer fires).
+- `POST /api/agents/decompose` `{task_id}` — persists AI-planned subtasks under a task.
+- `POST /api/agents/capture` `{text}` — extracts tasks with due dates from free text
+  and appends a snippet to today's journal.
+- `POST /api/agents/briefing` — Top-3 focus recommendation from overdue/today tasks
+  and yesterday's reflection.
+
+Tests never touch the network: agent runners live in `app/agents.py` and are
+monkeypatched in `tests/test_agents.py`; `pydantic_ai.models.test.TestModel` proves
+the prompt/output-schema wiring.
+
+## Scheduled rollups (systemd, user-level)
+
+```bash
+./systemd/install.sh   # copies units to ~/.config/systemd/user, enables timers
+```
+
+Daily 23:30 · weekly Sunday 23:59 · monthly on the 1st 00:05 (covers the previous
+month). Each timer POSTs to the local API; rollups only run while the backend is
+up. Inspect with `systemctl --user list-timers 'journal-*'`.
+
+
 ## Known limitations / deferred
 
 - Timezone-aware scheduling (store local + convert) is deferred until the frontend lands; naive-UTC is the interim contract.

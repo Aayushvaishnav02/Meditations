@@ -1,0 +1,6 @@
+[Unit]
+Description=Journal weekly AI rollup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -sS --fail --max-time 900 -X POST http://127.0.0.1:8000/api/agents/rollup/weekly

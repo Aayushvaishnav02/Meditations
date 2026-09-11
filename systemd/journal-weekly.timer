@@ -1,0 +1,10 @@
+[Unit]
+Description=Journal weekly AI rollup (Sunday night)
+
+[Timer]
+OnCalendar=Sun *-*-* 23:59:00
+Persistent=true
+Unit=journal-weekly.service
+
+[Install]
+WantedBy=timers.target

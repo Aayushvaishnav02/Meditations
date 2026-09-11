@@ -1,0 +1,7 @@
+[Unit]
+Description=Journal daily AI rollup
+# fires only if the backend API is running (desktop app)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -sS --fail --max-time 600 -X POST http://127.0.0.1:8000/api/agents/rollup/daily

@@ -26,3 +26,8 @@ def day_bounds(day: date) -> tuple[datetime, datetime]:
     """UTC [start, end) interval covering the given calendar day (naive UTC)."""
     start = datetime.combine(day, time.min)
     return start, start + timedelta(days=1)
+
+
+def monday_of(day: date) -> date:
+    """Monday of the ISO week containing the given day."""
+    return day - timedelta(days=day.weekday())
