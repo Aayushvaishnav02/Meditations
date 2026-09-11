@@ -121,6 +121,20 @@ export function useCreateSession() {
   })
 }
 
+export function useDecomposeTask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (taskId: string) => api.post<{ subtasks: Task[]; advice: string }>(`/agents/decompose`, { task_id: taskId }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: qk.tasks })
+      toast.success(data.subtasks.length > 0 ? `Added ${data.subtasks.length} subtasks` : "No subtasks suggested", {
+        description: data.advice || undefined,
+      })
+    },
+    onError: () => toast.error("AI breakdown failed — is the AI provider reachable?"),
+  })
+}
+
 export function useJournalEntry(day: string) {
   return useQuery({
     queryKey: ["journal", day],
