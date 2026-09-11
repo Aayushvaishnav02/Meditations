@@ -61,7 +61,7 @@ export function SecondBrain() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-5">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto px-6 pt-5 min-h-0">
       <div className="flex items-center gap-3">
         <h1 className="text-lg font-semibold tracking-tight">Second brain</h1>
         <span className="ml-auto text-xs text-muted-foreground">

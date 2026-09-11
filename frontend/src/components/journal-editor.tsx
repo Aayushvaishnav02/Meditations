@@ -226,7 +226,7 @@ export function JournalView() {
   if (section !== "journal") return null
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-5">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col overflow-y-auto px-6 pt-5 min-h-0">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon-sm" onClick={() => shiftDay(-1)} aria-label="Previous day">
           <ChevronLeft />
