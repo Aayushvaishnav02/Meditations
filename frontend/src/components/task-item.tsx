@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { CalendarDays, ChevronDown, ChevronRight, Flag, MoreHorizontal, Plus, Repeat2, Timer } from "lucide-react"
+import { CalendarDays, ChevronDown, ChevronRight, Flag, MoreHorizontal, Plus, Repeat2, Sparkles, Timer } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useCreateTask, useDeleteTask, useUpdateTask } from "@/hooks/api"
+import { useCreateTask, useDecomposeTask, useDeleteTask, useUpdateTask } from "@/hooks/api"
 import { useFocusTimer } from "@/stores/timer"
 import { formatDue, formatDuration, parseUTC, toISO, startOfDay } from "@/lib/dates"
 import type { Priority, Task } from "@/api/types"
@@ -73,6 +73,7 @@ function TitleWithStrike({ task }: { task: Task }) {
 function TaskMenu({ task, lists }: { task: Task; lists: { id: string; name: string }[] }) {
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
+  const decompose = useDecomposeTask()
 
   const setDue = (days: number | null) => {
     if (days === null) {
@@ -110,6 +111,13 @@ function TaskMenu({ task, lists }: { task: Task; lists: { id: string; name: stri
             <Timer className="size-4" /> Focus on this
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem
+          disabled={decompose.isPending}
+          onClick={() => decompose.mutate(task.id)}
+        >
+          <Sparkles className="size-4" />
+          {decompose.isPending ? "Breaking down…" : "Break down with AI"}
+        </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Priority</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>

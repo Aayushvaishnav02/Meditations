@@ -450,11 +450,11 @@ breakdown_agent = Agent(
 - [x] Build "Insert Daily Activity" component to embed completed tasks and focus metrics into journal notes.
 - [x] Store mood/energy ratings.
 
-### Phase 4: AI Hierarchical Compaction & Agent Workflows (Days 12–15) — `feat/ai-compaction-agents`
-- [ ] Implement PydanticAI agents (`daily_agent`, `weekly_agent`, `monthly_agent`).
-- [ ] Build dynamic provider switcher supporting local Ollama (`http://localhost:11434/v1`), OpenRouter, Groq, and Claude.
-- [ ] Build task decomposition agent and conversational omnibar capture.
-- [ ] Set up systemd `.service` and `.timer` files for automated nightly, weekly, and monthly compactions.
+### Phase 4: AI Hierarchical Compaction & Agent Workflows (Days 12–15) — `feat/ai-compaction-agents` ✅ (implemented on branch `feat/ai-compaction-agents`)
+- [x] Implement PydanticAI agents (`daily_agent`, `weekly_agent`, `monthly_agent`).
+- [x] Build dynamic provider switcher supporting local Ollama (`http://localhost:11434/v1`), OpenRouter, Groq, and Claude.
+- [x] Build task decomposition agent and conversational omnibar capture.
+- [x] Set up systemd `.service` and `.timer` files for automated nightly, weekly, and monthly compactions.
 
 ### Phase 5: Search, Polish & Desktop Packaging (Days 16–18) — `feat/rag-desktop-polish`
 - [ ] Integrate `sqlite-vec` or `fastembed` for hybrid semantic and keyword search.
