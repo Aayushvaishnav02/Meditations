@@ -11,6 +11,8 @@ dependencies = [
     "pydantic>=2.9.0",
     "pydantic-settings>=2.5.0",
     "pydantic-ai>=1.0.0",
+    "sqlite-vec>=0.1.9",
+    "fastembed>=0.8.0",
 ]
 
 [dependency-groups]

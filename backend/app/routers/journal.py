@@ -9,6 +9,7 @@ from sqlmodel import SQLModel, select
 from app.models import FocusSession, Habit, HabitLog, JournalEntry, Task
 from app.routers.deps import SessionDep
 from app.schemas import JournalUpsert
+from app.search import index_document, journal_doc_id, remove_document
 from app.telemetry import collect_daily_metrics
 from app.util import day_bounds, utc_now
 
@@ -71,6 +72,8 @@ async def upsert_entry(day: date, payload: JournalUpsert, session: SessionDep):
     session.add(entry)
     await session.commit()
     await session.refresh(entry)
+    await index_document(session, journal_doc_id(day), "journal", entry.raw_markdown)
+    await session.commit()
     return entry
 
 
@@ -78,6 +81,8 @@ async def upsert_entry(day: date, payload: JournalUpsert, session: SessionDep):
 async def delete_entry(day: date, session: SessionDep):
     entry = await _get_entry_or_404(session, day)
     await session.delete(entry)
+    await session.commit()
+    await remove_document(session, journal_doc_id(day))
     await session.commit()
 
 

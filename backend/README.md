@@ -90,6 +90,22 @@ Tests never touch the network: agent runners live in `app/agents.py` and are
 monkeypatched in `tests/test_agents.py`; `pydantic_ai.models.test.TestModel` proves
 the prompt/output-schema wiring.
 
+## Search (Phase 5)
+
+`GET /api/search?q=…` fuses two indexes with reciprocal-rank fusion:
+
+- **FTS5** (`fts_entries`) — always available; indexes journal entries, weekly and
+  monthly rollups as they are written.
+- **sqlite-vec** (`vec_entries`) — local `bge-small-en-v1.5` embeddings via
+  fastembed; strictly optional. If the extension or the model is unavailable the
+  app silently degrades to keyword search. Vectors only count when
+  `distance <= 1.0` (cosine ≥ 0.5) so small indexes never fabricate matches.
+
+Indexing happens automatically on journal save/delete and weekly/monthly
+rollups. `POST /api/search/reindex` rebuilds everything (backfills vectors too);
+`GET /api/search/status` reports what's active. The embedding model (~90 MB)
+downloads on first use into `~/.cache/fastembed`.
+
 ## Scheduled rollups (systemd, user-level)
 
 ```bash

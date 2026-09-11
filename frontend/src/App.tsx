@@ -4,6 +4,7 @@ import { Header } from "@/components/header"
 import { JournalView } from "@/components/journal-editor"
 import { KanbanBoard } from "@/components/kanban-board"
 import { QuickAdd } from "@/components/quick-add"
+import { SecondBrain } from "@/components/second-brain"
 import { Sidebar } from "@/components/sidebar"
 import { TaskSections } from "@/components/task-sections"
 import { useLists, useTasks } from "@/hooks/api"
@@ -35,6 +36,8 @@ export default function App() {
       <Sidebar />
       {section === "journal" ? (
         <JournalView />
+      ) : section === "second_brain" ? (
+        <SecondBrain />
       ) : (
         <main className="flex min-w-0 flex-1 flex-col">
           <Header />

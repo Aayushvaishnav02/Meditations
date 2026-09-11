@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import db
 from app.config import get_app_settings
-from app.routers import agents, ai_settings, focus, habits, journal, lists, scores, tasks
+from app.routers import agents, ai_settings, focus, habits, journal, lists, scores, search, tasks
 
 
 @asynccontextmanager
@@ -40,6 +40,7 @@ for router in (
     scores.router,
     ai_settings.router,
     agents.router,
+    search.router,
 ):
     app.include_router(router)
 

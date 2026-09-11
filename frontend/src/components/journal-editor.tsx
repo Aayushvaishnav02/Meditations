@@ -85,7 +85,8 @@ function RatingRow({
 
 export function JournalView() {
   const section = useUi((s) => s.section)
-  const [day, setDay] = useState(() => toDayParam(new Date()))
+  const journalDay = useUi((s) => s.journalDay)
+  const [day, setDay] = useState(() => journalDay ?? toDayParam(new Date()))
   const [mood, setMood] = useState<number | null>(null)
   const [energy, setEnergy] = useState<number | null>(null)
 
@@ -95,10 +96,10 @@ export function JournalView() {
 
   const [loadedDay, setLoadedDay] = useState<string | null>(null)
   const saveTimer = useRef<number | null>(null)
+  // payload frozen at schedule time so a day switch can never redirect it
+  const pendingSave = useRef<{ day: string; md: string; mood: number | null; energy: number | null } | null>(null)
 
   // debounced saves must never capture stale day/ratings; refs mirror latest state
-  const dayRef = useRef(day)
-  dayRef.current = day
   const moodRef = useRef(mood)
   moodRef.current = mood
   const energyRef = useRef(energy)
@@ -125,15 +126,24 @@ export function JournalView() {
 
   function scheduleSave(ed: NonNullable<ReturnType<typeof useEditor>>) {
     if (saveTimer.current) window.clearTimeout(saveTimer.current)
-    saveTimer.current = window.setTimeout(() => {
-      const md = getMarkdown(ed)
+    pendingSave.current = { day, md: getMarkdown(ed), mood: moodRef.current, energy: energyRef.current }
+    saveTimer.current = window.setTimeout(flushSave, 700)
+  }
+
+  /** Write the pending payload to its own day; call before any day switch. */
+  function flushSave() {
+    if (saveTimer.current) window.clearTimeout(saveTimer.current)
+    saveTimer.current = null
+    const pending = pendingSave.current
+    pendingSave.current = null
+    if (pending) {
       saveRef.current.mutate({
-        day: dayRef.current,
-        raw_markdown: md,
-        mood: moodRef.current,
-        energy: energyRef.current,
+        day: pending.day,
+        raw_markdown: pending.md,
+        mood: pending.mood,
+        energy: pending.energy,
       })
-    }, 700)
+    }
   }
 
   // pull day switch + rating changes into the next save
@@ -141,6 +151,15 @@ export function JournalView() {
     setMood(entry.data?.mood ?? null)
     setEnergy(entry.data?.energy ?? null)
   }, [day, entry.data])
+
+  // arriving from Second Brain: flush pending save to its own day, then jump
+  useEffect(() => {
+    if (journalDay && journalDay !== day) {
+      flushSave()
+      setDay(journalDay)
+      useUi.setState({ journalDay: null })
+    }
+  }, [journalDay, day])
 
   // load stored markdown once per day
   useEffect(() => {
@@ -152,6 +171,7 @@ export function JournalView() {
   }, [editor, entry.data, day, loadedDay])
 
   function shiftDay(delta: number) {
+    flushSave()
     const d = new Date(`${day}T12:00:00`)
     d.setDate(d.getDate() + delta)
     setDay(toDayParam(d))

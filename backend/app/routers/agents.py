@@ -12,6 +12,7 @@ from app.models import DailyScore, JournalEntry, MonthlySummary, Task, WeeklySum
 from app.routers.deps import SessionDep
 from app.routers.scores import DailyScoreResponse
 from app.scoring import ScoreBreakdown, compute_daily_score
+from app.search import index_document
 from app.telemetry import collect_daily_metrics
 from app.util import monday_of, new_id, utc_now
 
@@ -196,6 +197,13 @@ async def rollup_weekly(session: SessionDep, week_start: dt.date | None = None):
     session.add(week)
     await session.commit()
     await session.refresh(week)
+    await index_document(
+        session,
+        f"weekly:{week.week_start.isoformat()}",
+        "weekly",
+        "\n".join(filter(None, [week.wins, week.misses, week.carried_action_items])),
+    )
+    await session.commit()
     return week
 
 
@@ -256,6 +264,8 @@ async def rollup_monthly(session: SessionDep, month: str | None = Query(default=
     session.add(row)
     await session.commit()
     await session.refresh(row)
+    await index_document(session, f"monthly:{row.month}", "monthly", row.narrative)
+    await session.commit()
     return row
 
 
@@ -309,7 +319,9 @@ async def capture(body: CaptureRequest, session: SessionDep):
         if item.due_date:
             try:
                 naive = dt.datetime.fromisoformat(f"{item.due_date}T{item.due_time or '09:00'}")
-                # server runs on the user's machine: naive input == local time
+                # local-first assumption: the server runs on the user's machine,
+                # so naive AI-returned times are interpreted as system-local and
+                # normalized to naive UTC (the storage convention).
                 due_utc = naive.astimezone(dt.timezone.utc).replace(tzinfo=None)
             except ValueError as exc:
                 raise HTTPException(status_code=502, detail=f"AI returned an invalid date: {item.due_date}") from exc

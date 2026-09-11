@@ -1,7 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api, ApiError } from "@/api/client"
-import type { JournalActivity, JournalEntry, JournalInput, Task, TaskInput, TaskList } from "@/api/types"
+import type {
+  JournalActivity,
+  JournalEntry,
+  JournalInput,
+  SearchHit,
+  SearchStatus,
+  Task,
+  TaskInput,
+  TaskList,
+} from "@/api/types"
 
 export const qk = {
   tasks: ["tasks"] as const,
@@ -132,6 +141,22 @@ export function useDecomposeTask() {
       })
     },
     onError: () => toast.error("AI breakdown failed — is the AI provider reachable?"),
+  })
+}
+
+export function useSearch(query: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["search", query],
+    queryFn: () => api.get<SearchHit[]>(`/search?q=${encodeURIComponent(query)}`),
+    enabled: enabled && query.trim().length >= 2,
+  })
+}
+
+export function useSearchStatus(enabled: boolean) {
+  return useQuery({
+    queryKey: ["search-status"],
+    queryFn: () => api.get<SearchStatus>("/search/status"),
+    enabled,
   })
 }
 
