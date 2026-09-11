@@ -146,7 +146,19 @@ async def update_task(task_id: str, payload: TaskUpdate, session: SessionDep):
     if completing and task.recurrence_rule:
         base = task.due_date or task.completed_at
         next_due = next_occurrence(task.recurrence_rule, base or utc_now())
-        if next_due is not None:
+        # un-complete/re-complete cycles must not stack duplicate instances
+        duplicate = (
+            await session.exec(
+                select(Task).where(
+                    Task.title == task.title,
+                    Task.recurrence_rule == task.recurrence_rule,
+                    Task.status.in_(["todo", "in_progress"]),
+                    Task.due_date == next_due,
+                    Task.id != task.id,
+                )
+            )
+        ).first() if next_due is not None else None
+        if next_due is not None and duplicate is None:
             session.add(
                 Task(
                     id=new_id(),

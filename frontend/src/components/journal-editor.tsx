@@ -135,11 +135,22 @@ export function JournalView() {
     onUpdate: ({ editor }) => scheduleSave(editor),
   })
 
-  function scheduleSave(ed: NonNullable<ReturnType<typeof useEditor>>, force = false) {
+  function scheduleSave(
+    ed: NonNullable<ReturnType<typeof useEditor>>,
+    force = false,
+    overrides?: { mood?: number | null; energy?: number | null },
+  ) {
     const md = getMarkdown(ed)
     if (!force && md === baselineMdRef.current) return // programmatic setContent, not a user edit
     if (saveTimer.current) window.clearTimeout(saveTimer.current)
-    pendingSave.current = { day, md, mood: moodRef.current, energy: energyRef.current }
+    // React state updates are async: a rating click must pass its new value in
+    // explicitly — moodRef/energyRef still hold the previous render's value here.
+    pendingSave.current = {
+      day,
+      md,
+      mood: overrides && "mood" in overrides ? (overrides.mood ?? null) : moodRef.current,
+      energy: overrides && "energy" in overrides ? (overrides.energy ?? null) : energyRef.current,
+    }
     saveTimer.current = window.setTimeout(flushSave, 700)
   }
 
@@ -267,7 +278,7 @@ export function JournalView() {
             "Saving…"
           ) : save.isError ? (
             <span className="text-red-400">Save failed</span>
-          ) : save.data ? (
+          ) : save.data?.saved === true ? (
             <span className="flex items-center gap-1">
               <Check className="size-3 text-emerald-400" /> Saved
             </span>
@@ -304,8 +315,22 @@ export function JournalView() {
       ) : (
       <>
       <div className="glass mt-3 flex flex-col gap-2 rounded-2xl px-4 py-3">
-        <RatingRow label="Mood" value={mood} onChange={(v) => { setMood(v); if (editor) scheduleSave(editor, true) }} />
-        <RatingRow label="Energy" value={energy} onChange={(v) => { setEnergy(v); if (editor) scheduleSave(editor, true) }} />
+        <RatingRow
+          label="Mood"
+          value={mood}
+          onChange={(v) => {
+            setMood(v)
+            if (editor) scheduleSave(editor, true, { mood: v })
+          }}
+        />
+        <RatingRow
+          label="Energy"
+          value={energy}
+          onChange={(v) => {
+            setEnergy(v)
+            if (editor) scheduleSave(editor, true, { energy: v })
+          }}
+        />
       </div>
       <div className="glass mt-3 rounded-2xl px-5 py-4">
         <EditorContent editor={editor} />

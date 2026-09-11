@@ -200,6 +200,7 @@ export function useResetAISettings() {
 export function useTestAI() {
   return useMutation({
     mutationFn: () => api.post<AIConnectionTest>("/settings/ai/test", {}),
+    onError: () => toast.error("Test failed — is the backend running?"),
   })
 }
 
@@ -259,7 +260,10 @@ export function useDailyRollup() {
 export function useBriefing() {
   return useMutation({
     mutationFn: () => api.post<Briefing>("/agents/briefing", {}),
-    onError: () => toast.error("Briefing failed — is the AI provider reachable?"),
+    onError: (e) =>
+      toast.error("Briefing failed", {
+        description: e instanceof Error && e.message ? e.message : "Is the AI provider reachable?",
+      }),
   })
 }
 
@@ -275,7 +279,10 @@ export function useCapture() {
         description: data.journal_snippet ? "Snippet added to today's journal." : undefined,
       })
     },
-    onError: () => toast.error("Capture failed — is the AI provider reachable?"),
+    onError: (e) =>
+      toast.error("Capture failed", {
+        description: e instanceof Error && e.message ? e.message : "Is the AI provider reachable?",
+      }),
   })
 }
 
@@ -305,7 +312,7 @@ export function useSaveJournal() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: JournalInput & { day: string }) =>
-      api.put<JournalEntry>(`/journal/${input.day}`, { raw_markdown: input.raw_markdown, mood: input.mood ?? null, energy: input.energy ?? null }),
+      api.put<{ saved: boolean } & Partial<JournalEntry>>(`/journal/${input.day}`, { raw_markdown: input.raw_markdown, mood: input.mood ?? null, energy: input.energy ?? null }),
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: ["journal", input.day] })
       const prev = qc.getQueryData<JournalEntry>(["journal", input.day])
