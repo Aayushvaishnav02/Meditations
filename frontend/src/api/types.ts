@@ -121,6 +121,39 @@ export interface AppPrefs {
   target_deep_work_hours: number
 }
 
+export interface DailyScoreResponse {
+  date: string
+  task_score: number
+  focus_score: number
+  habit_score: number
+  weighted_score: number
+  llm_nudge: number
+  final_score: number
+  target_deep_work_hours: number
+  metrics: {
+    tasks_completed: number
+    tasks_planned: number
+    deep_work_hours: number
+    habits_completed: number
+    habits_scheduled: number
+  }
+  persisted: boolean
+  feedback: string | null
+  insight: string | null
+}
+
+export interface Briefing {
+  top_focus: string[]
+  reasoning: string
+  overdue_count: number
+  due_today_count: number
+}
+
+export interface CaptureResult {
+  tasks: Task[]
+  journal_snippet: string
+}
+
 export interface SearchStatus {
   fts: boolean
   semantic: boolean

@@ -3,6 +3,9 @@ import { toast } from "sonner"
 import { api, ApiError } from "@/api/client"
 import type {
   AIConnectionTest,
+  Briefing,
+  CaptureResult,
+  DailyScoreResponse,
   AISettingsView,
   AppPrefs,
   JournalActivity,
@@ -220,6 +223,50 @@ export function useReindex() {
         description: data.semantic ? "Semantic embeddings refreshed." : "Embedding model unavailable — keyword index only.",
       }),
     onError: () => toast.error("Couldn't rebuild the search index"),
+  })
+}
+
+export function useDailyScore(day: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["scores-daily", day],
+    queryFn: () => api.get<DailyScoreResponse>(`/scores/daily/${day}`),
+    enabled,
+  })
+}
+
+export function useDailyRollup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (day: string) => api.post<DailyScoreResponse>(`/agents/rollup/daily?day=${day}`, {}),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["scores-daily", data.date] })
+      qc.invalidateQueries({ queryKey: ["journal-days"] })
+      toast.success(`Daily review saved — score ${data.final_score.toFixed(1)}`)
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "AI review failed"),
+  })
+}
+
+export function useBriefing() {
+  return useMutation({
+    mutationFn: () => api.post<Briefing>("/agents/briefing", {}),
+    onError: () => toast.error("Briefing failed — is the AI provider reachable?"),
+  })
+}
+
+export function useCapture() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (text: string) => api.post<CaptureResult>("/agents/capture", { text }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: qk.tasks })
+      qc.invalidateQueries({ queryKey: ["journal"] })
+      qc.invalidateQueries({ queryKey: ["journal-days"] })
+      toast.success(`Captured ${data.tasks.length} task${data.tasks.length === 1 ? "" : "s"}`, {
+        description: data.journal_snippet ? "Snippet added to today's journal." : undefined,
+      })
+    },
+    onError: () => toast.error("Capture failed — is the AI provider reachable?"),
   })
 }
 

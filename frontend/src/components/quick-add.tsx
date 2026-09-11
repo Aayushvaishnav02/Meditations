@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react"
-import { Keyboard, ListFilter, Sparkles } from "lucide-react"
+import { Brain, Keyboard, ListFilter, Sparkles } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useCapture } from "@/hooks/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -51,8 +53,58 @@ function SyntaxHelp() {
   )
 }
 
+function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [text, setText] = useState("")
+  const capture = useCapture()
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[32rem]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Brain className="size-4 text-primary" /> Brain dump
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground">
+          Paste or dictate anything — the AI extracts tasks with due dates and adds a snippet to today's journal.
+        </p>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={5}
+          placeholder="e.g. Spoke with Alex. Need to email him the slide deck by Thursday 4pm and schedule team sync for Monday."
+          className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-3 text-sm outline-none focus:border-primary/50"
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            disabled={capture.isPending || !text.trim()}
+            onClick={async () => {
+              await capture.mutateAsync(text.trim())
+              setText("")
+              onOpenChange(false)
+            }}
+          >
+            <Sparkles /> {capture.isPending ? "Capturing…" : "Capture"}
+          </Button>
+        </div>
+        {capture.data && capture.data.tasks.length > 0 && (
+          <div className="space-y-1 text-xs text-muted-foreground">
+            {capture.data.tasks.map((t) => (
+              <div key={t.id} className="truncate">
+                + {t.title} {t.due_date ? `· due ${t.due_date.slice(0, 10)}` : ""}
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function QuickAdd() {
   const [value, setValue] = useState("")
+  const [captureOpen, setCaptureOpen] = useState(false)
   const lists = useLists()
   const createTask = useCreateTask()
   const createList = useCreateList()
@@ -118,8 +170,18 @@ export function QuickAdd() {
           placeholder="Add a task…  try: buy milk tomorrow 5pm !1 #personal @errands ~10m"
           className="h-9 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => setCaptureOpen(true)}
+          aria-label="AI brain-dump capture"
+          title="AI brain-dump capture"
+        >
+          <Brain />
+        </Button>
         <SyntaxHelp />
       </div>
+      <CaptureDialog open={captureOpen} onOpenChange={setCaptureOpen} />
 
       {value && hasExtras && (
         <div className="flex flex-wrap items-center gap-1.5 px-2 pt-2 text-xs">

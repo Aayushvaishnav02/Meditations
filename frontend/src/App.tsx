@@ -2,6 +2,7 @@ import { AlertCircle } from "lucide-react"
 import { FocusTimer } from "@/components/focus-timer"
 import { Header } from "@/components/header"
 import { JournalView } from "@/components/journal-editor"
+import { BriefingCard } from "@/components/briefing-card"
 import { CalendarView } from "@/components/calendar-view"
 import { KanbanBoard } from "@/components/kanban-board"
 import { QuickAdd } from "@/components/quick-add"
@@ -54,6 +55,7 @@ export default function App() {
         <main className="flex min-w-0 flex-1 flex-col">
           <Header />
           <QuickAdd />
+          {view === "list" && !tasks.isError && scope.kind === "smart" && scope.id === "today" && <BriefingCard />}
           <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
             {tasks.isError ? (
               <TasksErrorBanner onRetry={() => void tasks.refetch()} />

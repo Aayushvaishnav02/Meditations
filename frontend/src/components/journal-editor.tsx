@@ -7,6 +7,8 @@ import { Markdown } from "tiptap-markdown"
 import { Check, ChevronLeft, ChevronRight, ListChecks, Sparkles } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { MiniMonth } from "@/components/journal-calendar"
+import { JournalCalendar } from "@/components/journal-calendar-view"
+import { DailyReviewCard } from "@/components/daily-review-card"
 import { Button } from "@/components/ui/button"
 import { useJournalActivity, useJournalDays, useJournalEntry, useSaveJournal } from "@/hooks/api"
 import { SlashCommands } from "@/components/slash-command"
@@ -100,6 +102,7 @@ export function JournalView() {
 
   const [loadedDay, setLoadedDay] = useState<string | null>(null)
   const [openPopover, setOpenPopover] = useState(false)
+  const [mode, setMode] = useState<"editor" | "calendar">("editor")
   // markdown baseline after the last load: setContent-driven updates must not re-save
   const baselineMdRef = useRef<string>("")
   const saveTimer = useRef<number | null>(null)
@@ -272,6 +275,34 @@ export function JournalView() {
         </div>
       </div>
 
+      <div className="mt-3 flex items-center gap-0.5 self-start rounded-lg border border-[var(--glass-border)] p-0.5">
+        {(["editor", "calendar"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={cn(
+              "rounded-md px-3 py-1 text-xs capitalize transition-colors",
+              mode === m ? "bg-primary/20 text-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+
+      {mode === "calendar" ? (
+        <div className="mt-3">
+          <JournalCalendar
+            selected={day}
+            onSelect={(d) => {
+              flushSave()
+              setDay(d)
+              setMode("editor")
+            }}
+          />
+        </div>
+      ) : (
+      <>
       <div className="glass mt-3 flex flex-col gap-2 rounded-2xl px-4 py-3">
         <RatingRow label="Mood" value={mood} onChange={(v) => { setMood(v); if (editor) scheduleSave(editor, true) }} />
         <RatingRow label="Energy" value={energy} onChange={(v) => { setEnergy(v); if (editor) scheduleSave(editor, true) }} />
@@ -279,6 +310,8 @@ export function JournalView() {
       <div className="glass mt-3 rounded-2xl px-5 py-4">
         <EditorContent editor={editor} />
       </div>
+
+      <DailyReviewCard day={day} />
 
       <div className="mt-3 flex items-center gap-2 pb-8 text-xs">
         <Button variant="outline" size="xs" onClick={() => void insertActivity()}>
@@ -294,6 +327,8 @@ export function JournalView() {
           </span>
         )}
       </div>
+      </>
+      )}
     </main>
   )
 }
