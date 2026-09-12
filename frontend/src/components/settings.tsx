@@ -1,22 +1,29 @@
 import { useEffect, useState } from "react"
 import {
   Bot,
+  Check,
   CheckCircle2,
+  ChevronDown,
   Coins,
   Gauge,
+  Palette,
   RefreshCw,
   RotateCcw,
   Save,
   ScrollText,
   Search,
-  Sun,
-  Moon,
   XCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   useAIUsage,
   useAppPrefs,
@@ -30,7 +37,7 @@ import {
   useSearchStatus,
   useTestAI,
 } from "@/hooks/api"
-import { useUi } from "@/stores/ui"
+import { THEMES, useUi, type Theme } from "@/stores/ui"
 import { cn } from "cn"
 
 function Card({ title, icon: Icon, children }: { title: string; icon: typeof Bot; children: React.ReactNode }) {
@@ -327,26 +334,52 @@ function SearchCard() {
   )
 }
 
+function ThemeSwatch({ id }: { id: Theme }) {
+  const meta = THEMES.find((t) => t.id === id)!
+  return (
+    <span
+      className={cn(
+        "flex h-4 w-7 shrink-0 overflow-hidden rounded border border-border/60",
+        meta.dark && "dark",
+        id !== "dark" && id !== "light" && `theme-${id}`,
+      )}
+      aria-hidden
+    >
+      <span className="flex-1 bg-background" />
+      <span className="flex-1 bg-card" />
+      <span className="flex-1 bg-primary" />
+    </span>
+  )
+}
+
 function AppearanceCard() {
   const theme = useUi((s) => s.theme)
   const setTheme = useUi((s) => s.setTheme)
+  const current = THEMES.find((t) => t.id === theme) ?? THEMES[0]
   return (
-    <Card title="Appearance" icon={theme === "dark" ? Moon : Sun}>
-      <div className="glass flex items-center gap-0.5 rounded-lg p-0.5">
-        {(["dark", "light"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTheme(t)}
-            className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors",
-              theme === t ? "bg-primary/20 text-foreground" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t === "dark" ? <Moon className="size-3.5" /> : <Sun className="size-3.5" />}
-            {t === "dark" ? "Dark" : "Light"}
-          </button>
-        ))}
-      </div>
+    <Card title="Appearance" icon={Palette}>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" size="sm" className="w-60 justify-between" aria-label={`Theme: ${current.label}`} />
+          }
+        >
+          <span className="flex items-center gap-2">
+            <ThemeSwatch id={current.id} />
+            {current.label}
+          </span>
+          <ChevronDown className="size-3.5 text-muted-foreground" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-60">
+          {THEMES.map((t) => (
+            <DropdownMenuItem key={t.id} onClick={() => setTheme(t.id)}>
+              <ThemeSwatch id={t.id} />
+              <span className="flex-1">{t.label}</span>
+              {theme === t.id && <Check className="size-3.5" />}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </Card>
   )
 }
