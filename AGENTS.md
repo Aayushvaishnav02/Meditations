@@ -95,9 +95,16 @@ npm run tauri dev | build                      # desktop shell (needs rust + web
 - **Personal AI gateways mask upstream 429s as HTTP 503** (Antigravity, some
   Ollama proxies) and rate-limit aggressively; pydantic-ai's `retries=` does
   NOT cover HTTP errors. `create_agent_model()` wraps every model in
-  `ResilientModel` (spaced retries on 429/5xx); user-facing errors go through
+  `ResilientModel` (spaced retries on 429/5xx + connection errors, one retry
+  timed to the gateway's "reset after 4m 21s" hint, capped at
+  `RESET_RETRY_CAP_SECONDS`); user-facing errors go through
   `describe_ai_error()`. The connection test uses `resilient=False` to fail
   fast. Don't unwrap these without a plan for rate limits.
+- **`create_agent_model()` with no arguments uses ENV defaults** — it cannot
+  see the provider the user configured in Settings (app_settings rows).
+  Request paths MUST build models via `load_ai_settings(session)` first
+  (routers/agents.py `_request_model`). Skipping this shipped once: the test
+  button passed while every real feature dialed the env-default Ollama.
 - **tiptap v3**: StarterKit is one configurable class (no task lists — add
   `TaskList`/`TaskItem` from `@tiptap/extension-list`); markdown storage via
   `tiptap-markdown`; `editor.storage.markdown.getMarkdown()` needs a cast.

@@ -46,6 +46,20 @@ PROMPT_KEYS = (
 # Space the retries wide enough to survive per-minute rate-limit windows
 # without hanging a UI request for the full ~15-min quota reset.
 RETRY_BACKOFF_SECONDS = (3.0, 9.0, 27.0)
+# Quota errors carry "reset after 4m 21s" hints: wait exactly that long (once),
+# but never stall a UI request longer than this cap — past it, fail with the
+# translated message so the user can retry when the window actually resets.
+RESET_RETRY_CAP_SECONDS = 120.0
+
+
+def _reset_hint_seconds(exc: Exception) -> float | None:
+    """Parse a 'reset after 4m 21s'-style hint from a rate-limit error body."""
+    match = re.search(r"reset after\s+(?:(\d+)h)?\s*(?:(\d+)m)?\s*(?:(\d+)s)?", str(exc), re.IGNORECASE)
+    if not match:
+        return None
+    h, m, s = (int(v) if v else 0 for v in match.groups())
+    total = h * 3600 + m * 60 + s
+    return float(total) if total > 0 else None
 
 
 async def load_ai_settings(session: AsyncSession) -> AISettings:
@@ -82,31 +96,56 @@ def _is_transient_error(exc: Exception) -> bool:
     return isinstance(exc, ModelAPIError)  # connect/timeout errors
 
 
+def _is_quota_error(exc: Exception) -> bool:
+    if not isinstance(exc, ModelHTTPError):
+        return False
+    body = str(exc.body)
+    return exc.status_code == 429 or "RESOURCE_EXHAUSTED" in body or "quota" in body.lower()
+
+
+async def _retry_delay(exc: Exception, attempt: int) -> float | None:
+    """Seconds to wait before retry #attempt+1; None = give up.
+
+    Quota errors get ONE retry timed to the gateway's own reset hint; other
+    transient errors walk the short backoff ladder.
+    """
+    if not _is_transient_error(exc):
+        return None
+    if _is_quota_error(exc):
+        if attempt > 0:
+            return None
+        hint = _reset_hint_seconds(exc)
+        return min(hint + 5.0, RESET_RETRY_CAP_SECONDS) if hint is not None else None
+    return RETRY_BACKOFF_SECONDS[attempt] if attempt < len(RETRY_BACKOFF_SECONDS) else None
+
+
 class ResilientModel(WrapperModel):
     """Retries transient HTTP errors (429/5xx) with spaced backoff.
 
     pydantic-ai's `retries=` only covers validation/tool retries, and the OpenAI
     SDK's built-in retry budget is tiny — one burst from a small-quota gateway
-    would otherwise fail the whole rollup. Streaming retries only apply before
-    the first yielded chunk (connection/response-status errors); a stream that
-    dies mid-flight is never silently restarted.
+    would otherwise fail the whole rollup. Streaming retries only apply while
+    the wrapped request is still being set up (context enter raises before we
+    yield); once handed to the consumer, a stream that dies is never silently
+    restarted.
     """
 
     async def request(self, messages, model_settings, model_request_parameters):  # type: ignore[override]
-        attempts = 1 + len(RETRY_BACKOFF_SECONDS)
-        for attempt in range(attempts):
+        attempt = 0
+        while True:
             try:
                 return await self.wrapped.request(messages, model_settings, model_request_parameters)
             except Exception as exc:
-                if attempt == attempts - 1 or not _is_transient_error(exc):
+                delay = await _retry_delay(exc, attempt)
+                if delay is None:
                     raise
-                await asyncio.sleep(RETRY_BACKOFF_SECONDS[attempt])
-        raise AssertionError("unreachable")  # pragma: no cover
+                attempt += 1
+                await asyncio.sleep(delay)
 
     @asynccontextmanager
     async def request_stream(self, messages, model_settings, model_request_parameters, run_context=None):  # type: ignore[override]
-        attempts = 1 + len(RETRY_BACKOFF_SECONDS)
-        for attempt in range(attempts):
+        attempt = 0
+        while True:
             yielded = False
             try:
                 async with self.wrapped.request_stream(
@@ -116,10 +155,11 @@ class ResilientModel(WrapperModel):
                     yield stream
                     return
             except Exception as exc:
-                if yielded or attempt == attempts - 1 or not _is_transient_error(exc):
+                delay = None if yielded else await _retry_delay(exc, attempt)
+                if delay is None:
                     raise
-                await asyncio.sleep(RETRY_BACKOFF_SECONDS[attempt])
-        raise AssertionError("unreachable")  # pragma: no cover
+                attempt += 1
+                await asyncio.sleep(delay)
 
 
 def describe_ai_error(exc: Exception) -> str:
@@ -127,8 +167,8 @@ def describe_ai_error(exc: Exception) -> str:
     if isinstance(exc, ModelHTTPError):
         body = str(exc.body)
         if exc.status_code == 429 or "RESOURCE_EXHAUSTED" in body or "quota" in body.lower():
-            reset = re.search(r"reset after \S+", body, re.IGNORECASE)
-            window = f" ({reset.group(0)})" if reset else ""
+            reset = re.search(r"reset after [\dhms ]+", body, re.IGNORECASE)
+            window = f" (resets in {reset.group(0).removeprefix('reset after ').strip()})" if reset else ""
             return f"Provider rate limit reached{window}. Wait a few minutes and retry."
         if exc.status_code in (401, 403):
             return "Authentication failed — check the API key for this endpoint."

@@ -106,6 +106,7 @@ export function JournalView() {
   // AI assist preview: which action is being streamed into the panel
   const assist = useEditorAssist()
   const [assistView, setAssistView] = useState<AssistAction | null>(null)
+  const assistSourceRef = useRef<string>("")
   // markdown baseline after the last load: setContent-driven updates must not re-save
   const baselineMdRef = useRef<string>("")
   const saveTimer = useRef<number | null>(null)
@@ -197,10 +198,14 @@ export function JournalView() {
   useEffect(() => {
     if (!editor || loadedDay === day) return
     if (entry.data === undefined) return // still loading
+    // a pending assist belongs to the day it was opened on — never let it land elsewhere
+    setAssistView(null)
+    assist.clear()
     const md = entry.data?.raw_markdown ?? ""
     editor.commands.setContent(md)
     baselineMdRef.current = getMarkdown(editor)
     setLoadedDay(day)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, entry.data, day, loadedDay])
 
   function shiftDay(delta: number) {
@@ -232,12 +237,14 @@ export function JournalView() {
   /** Whole-entry AI assist; streams into the preview panel (see AssistPanel). */
   async function runAssist(ed: Editor | null, action: AssistAction) {
     if (!ed || assist.pending) return
-    if (!getMarkdown(ed).trim()) {
+    const source = getMarkdown(ed)
+    if (!source.trim()) {
       toast.error("Nothing to assist yet — write something first")
       return
     }
+    assistSourceRef.current = source // accept() compares against this
     setAssistView(action)
-    await assist.run(action, getMarkdown(ed))
+    await assist.run(action, source)
   }
 
   function acceptAssist() {
@@ -245,6 +252,11 @@ export function JournalView() {
     const md = assist.text.trim()
     if (!md) {
       toast.error("The AI returned nothing")
+      return
+    }
+    if (getMarkdown(editor) !== assistSourceRef.current) {
+      // the entry changed while the AI was streaming — refuse to clobber it
+      toast.error("The entry changed while the AI was working — discard and retry")
       return
     }
     const current = getMarkdown(editor)

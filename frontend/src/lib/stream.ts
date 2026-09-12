@@ -29,17 +29,21 @@ export async function* sseEvents(
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ""
-  for (;;) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    let idx
-    while ((idx = buffer.indexOf("\n\n")) !== -1) {
-      const frame = buffer.slice(0, idx)
-      buffer = buffer.slice(idx + 2)
-      const parsed = parseFrame(frame)
-      if (parsed) yield parsed
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      let idx
+      while ((idx = buffer.indexOf("\n\n")) !== -1) {
+        const frame = buffer.slice(0, idx)
+        buffer = buffer.slice(idx + 2)
+        const parsed = parseFrame(frame)
+        if (parsed) yield parsed
+      }
     }
+  } finally {
+    await reader.cancel().catch(() => {}) // never leak the body when the consumer breaks early
   }
 }
 

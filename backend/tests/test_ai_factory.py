@@ -129,3 +129,35 @@ def test_describe_ai_error_connection():
     from pydantic_ai import ModelAPIError
 
     assert "running" in ai_factory.describe_ai_error(ModelAPIError(model_name="m", message="Connection error."))
+
+
+def test_quota_error_retries_after_reset_hint_once(no_wait, monkeypatch):
+    """Quota errors wait out the gateway's reset hint, once, then surface."""
+    sleeps = []
+    monkeypatch.setattr(ai_factory.asyncio, "sleep", lambda s: sleeps.append(s) or _noop())
+    model = ai_factory.ResilientModel(
+        FlakyModel(failures=99, body={"message": "[ag/x] [429]: quota (reset after 4m 21s)"})
+    )
+    with pytest.raises(ModelHTTPError):
+        _run(model)
+    assert sleeps == [5.0 + 261.0 if 261.0 + 5.0 <= ai_factory.RESET_RETRY_CAP_SECONDS else ai_factory.RESET_RETRY_CAP_SECONDS]
+    assert model.wrapped.calls == 2  # exactly one timed retry, then honest failure
+
+
+def test_transient_5xx_walks_backoff_ladder(no_wait):
+    sleeps = []
+    model = ai_factory.ResilientModel(FlakyModel(failures=99))
+    with pytest.raises(ModelHTTPError):
+        _run(model)
+    assert model.wrapped.calls == 1 + len(ai_factory.RETRY_BACKOFF_SECONDS)
+
+
+async def _noop():
+    return None
+
+
+def test_reset_hint_parsing():
+    assert ai_factory._reset_hint_seconds(Exception("reset after 15m")) == 900.0
+    assert ai_factory._reset_hint_seconds(Exception("reset after 4m 21s")) == 261.0
+    assert ai_factory._reset_hint_seconds(Exception("reset after 1h 2m 3s")) == 3723.0
+    assert ai_factory._reset_hint_seconds(Exception("no hint")) is None

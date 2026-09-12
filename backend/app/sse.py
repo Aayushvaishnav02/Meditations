@@ -13,7 +13,6 @@ from fastapi.responses import StreamingResponse
 
 SSE_HEADERS = {
     "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
     "X-Accel-Buffering": "no",  # don't buffer when proxied
 }
 

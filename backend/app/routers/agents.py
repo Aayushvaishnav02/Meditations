@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlmodel import select
 
 import app.agents as agents
-from app.ai_factory import describe_ai_error, load_prompt_overrides
+from app.ai_factory import create_agent_model, describe_ai_error, load_ai_settings, load_prompt_overrides
 from app.ai_usage import make_recorder
 from app.models import DailyScore, JournalEntry, MonthlySummary, Task, WeeklySummary
 from app.routers.deps import SessionDep
@@ -25,7 +25,15 @@ router = APIRouter(prefix="/api/agents", tags=["agents"])
 # Bounded Q&A context (plan §3.3 discipline: token cost stays O(1))
 ASK_MAX_SOURCES = 6
 ASK_SOURCE_CHARS = 1200
+ASK_MAX_HISTORY = 12  # render keeps the last 6 turns
+ASK_MAX_QUESTION = 4000
 ASSIST_SOURCE_CHARS = 6000
+
+
+async def _request_model(session: SessionDep, fast: bool = False):
+    """Model built from the effective DB/env settings — env defaults alone
+    would silently ignore the provider the user configured in Settings."""
+    return create_agent_model(await load_ai_settings(session), fast=fast)
 
 
 def trend_of(scores: list[float]) -> str:
@@ -64,7 +72,7 @@ def _score_response(day: dt.date, breakdown: ScoreBreakdown, row: DailyScore) ->
     )
 
 
-async def _daily_deps(session: SessionDep, day: dt.date, metrics, breakdown: ScoreBreakdown) -> agents.DailyDeps:
+async def _daily_deps(session: SessionDep, day: dt.date, metrics, entry: JournalEntry) -> agents.DailyDeps:
     """Bounded context for the daily agent (today + 6 past days + latest rollups)."""
     past_days: list[dict] = []
     for offset in range(1, 7):
@@ -89,7 +97,7 @@ async def _daily_deps(session: SessionDep, day: dt.date, metrics, breakdown: Sco
 
     return agents.DailyDeps(
         day=day,
-        today_raw=(await session.get(JournalEntry, day)).raw_markdown,
+        today_raw=entry.raw_markdown,
         past_days=past_days,
         weekly_context=(latest_weekly.wins + "\n" + (latest_weekly.misses or "")) if latest_weekly else None,
         monthly_context=latest_monthly.narrative if latest_monthly else None,
@@ -131,12 +139,13 @@ async def rollup_daily(session: SessionDep, day: dt.date | None = None):
 
     metrics = await collect_daily_metrics(session, day)
     breakdown = compute_daily_score(metrics)
-    deps = await _daily_deps(session, day, metrics, breakdown)
+    deps = await _daily_deps(session, day, metrics, entry)
 
     overrides = await load_prompt_overrides(session)
     review: agents.DailyReviewOutput = await _llm_call(
         agents.run_daily_review(
             deps,
+            model=await _request_model(session),
             system_prompt=overrides.get("daily"),
             on_usage=make_recorder(session),
         )
@@ -159,14 +168,17 @@ async def rollup_daily_stream(session: SessionDep, day: dt.date | None = None):
     # All DB reads happen before streaming; only the final write runs in the stream.
     metrics = await collect_daily_metrics(session, day)
     breakdown = compute_daily_score(metrics)
-    deps = await _daily_deps(session, day, metrics, breakdown)
+    deps = await _daily_deps(session, day, metrics, entry)
     overrides = await load_prompt_overrides(session)
 
     async def gen():
         review: agents.DailyReviewOutput | None = None
         try:
             async for partial in agents.stream_daily_review(
-                deps, system_prompt=overrides.get("daily"), on_usage=make_recorder(session)
+                deps,
+                model=await _request_model(session),
+                system_prompt=overrides.get("daily"),
+                on_usage=make_recorder(session),
             ):
                 review = partial
                 yield sse("partial", partial.model_dump())
@@ -239,7 +251,8 @@ async def rollup_weekly(session: SessionDep, week_start: dt.date | None = None):
                 past_weeks=past_weeks,
                 monthly_context=latest_monthly.narrative if latest_monthly else None,
                 trend=trend,
-            )
+            ),
+            model=await _request_model(session),
         )
     )
 
@@ -309,6 +322,7 @@ async def rollup_monthly(session: SessionDep, month: str | None = Query(default=
                 past_months=past_months,
                 trend=trend,
             ),
+            model=await _request_model(session),
             system_prompt=(await load_prompt_overrides(session)).get("monthly"),
             on_usage=make_recorder(session),
         )
@@ -344,6 +358,7 @@ async def decompose_task(body: DecomposeRequest, session: SessionDep):
             task.title,
             task.description,
             utc_now().date(),
+            model=await _request_model(session),
             system_prompt=(await load_prompt_overrides(session)).get("decompose"),
             on_usage=make_recorder(session),
         )
@@ -376,7 +391,15 @@ class CaptureRequest(BaseModel):
 async def capture(body: CaptureRequest, session: SessionDep):
     """Conversational capture: extract tasks from free text, register them and
     append the snippet to today's journal (plan §6.3.4)."""
-    review: agents.CaptureOutput = await _llm_call(agents.run_capture(body.text, utc_now().date()))
+    review: agents.CaptureOutput = await _llm_call(
+        agents.run_capture(
+            body.text,
+            utc_now().date(),
+            model=await _request_model(session, fast=True),
+            system_prompt=(await load_prompt_overrides(session)).get("capture"),
+            on_usage=make_recorder(session),
+        )
+    )
 
     created = []
     for item in review.tasks:
@@ -456,6 +479,7 @@ async def morning_briefing(session: SessionDep):
     review: agents.BriefingOutput = await _llm_call(
         agents.run_briefing(
             data,
+            model=await _request_model(session, fast=True),
             system_prompt=(await load_prompt_overrides(session)).get("briefing"),
             on_usage=make_recorder(session),
         )
@@ -480,7 +504,10 @@ async def morning_briefing_stream(session: SessionDep):
         try:
             final: agents.BriefingOutput | None = None
             async for partial in agents.stream_briefing(
-                data, system_prompt=overrides.get("briefing"), on_usage=make_recorder(session)
+                data,
+                model=await _request_model(session, fast=True),
+                system_prompt=overrides.get("briefing"),
+                on_usage=make_recorder(session),
             ):
                 final = partial
                 yield sse("partial", partial.model_dump())
@@ -542,7 +569,12 @@ async def ask_second_brain(body: AskRequest, session: SessionDep):
         yield sse("sources", sources)
         try:
             text = ""
-            async for chunk in agents.stream_ask(deps, system_prompt=overrides.get("ask"), on_usage=make_recorder(session)):
+            async for chunk in agents.stream_ask(
+                deps,
+                model=await _request_model(session, fast=True),
+                system_prompt=overrides.get("ask"),
+                on_usage=make_recorder(session),
+            ):
                 text = chunk
                 yield sse("partial", {"text": text})
             yield sse("done", {"text": text, "sources": sources})

@@ -14,7 +14,7 @@ export function DailyReviewCard({ day }: { day: string }) {
   const score = useDailyScore(day, true)
   const rollup = useDailyRollupStream()
 
-  const live = rollup.partial // streamed, not yet persisted
+  const live = rollup.partial?.day === day ? rollup.partial.output : null // streamed, this day only
   const m = score.data?.metrics
 
   return (
@@ -56,10 +56,10 @@ export function DailyReviewCard({ day }: { day: string }) {
       )}
 
       {live?.feedback && <p className="mt-3 text-sm leading-relaxed opacity-80">{live.feedback}</p>}
-      {live?.insight && (
+      {live?.key_insight && (
         <p className="mt-2 flex items-start gap-1.5 text-sm text-primary/90">
           <Sparkles className="mt-0.5 size-3.5 shrink-0" />
-          {live.insight}
+          {live.key_insight}
         </p>
       )}
       {!live && score.data?.feedback && <p className="mt-3 text-sm leading-relaxed">{score.data.feedback}</p>}

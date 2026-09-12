@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import SQLModel, select
 
 from app.ai_factory import (
@@ -102,8 +102,6 @@ async def get_prompts(session: SessionDep):
 async def update_prompts(payload: PromptsUpdate, session: SessionDep):
     unknown = set(payload.overrides) - set(PROMPT_DEFAULTS)
     if unknown:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=422, detail=f"unknown prompt keys: {sorted(unknown)}")
     for key, value in payload.overrides.items():
         await save_ai_settings(session, {f"prompt_{key}": value})

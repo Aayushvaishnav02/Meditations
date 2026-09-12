@@ -405,6 +405,7 @@ export interface ChatMessage {
   role: "user" | "assistant"
   content: string
   sources?: CitationSource[]
+  error?: boolean // failed turns are excluded from follow-up history
 }
 
 /** Ask-my-second-brain chat: answers stream in with citation sources attached. */
@@ -415,28 +416,38 @@ export function useSecondBrainChat() {
 
   const send = useCallback(
     async (question: string) => {
-      const history = messages.map((m) => ({ role: m.role, content: m.content }))
-      setMessages((m) => [...m, { role: "user", content: question }, { role: "assistant", content: "" }])
+      // error bubbles are not real assistant turns — never replay them as context
+      const history = messages
+        .filter((m) => !m.error)
+        .map((m) => ({ role: m.role, content: m.content }))
       setPending(true)
       abortRef.current?.abort()
       const ac = new AbortController()
       abortRef.current = ac
-      const updateLast = (patch: Partial<ChatMessage>) =>
+      // patch by index: an aborted older stream must never touch the new turn
+      const answerIdx = messages.length + 1
+      setMessages((m) => [...m, { role: "user", content: question }, { role: "assistant", content: "" }])
+      const patchAt = (patch: Partial<ChatMessage>) =>
         setMessages((m) => {
+          if (ac.signal.aborted || m[answerIdx]?.role !== "assistant") return m
           const copy = [...m]
-          copy[copy.length - 1] = { ...copy[copy.length - 1], ...patch }
+          copy[answerIdx] = { ...copy[answerIdx], ...patch }
           return copy
         })
       try {
         for await (const { event, data } of sseEvents("/agents/ask/stream", { question, history }, ac.signal)) {
-          if (event === "partial") updateLast({ content: data.text })
-          else if (event === "sources") updateLast({ sources: data })
+          if (event === "partial") patchAt({ content: data.text })
+          else if (event === "sources") patchAt({ sources: data })
           else if (event === "error") throw new Error(data.message)
         }
       } catch (e) {
-        updateLast({ content: `⚠ ${e instanceof Error ? e.message : "The answer failed."}` })
+        if (ac.signal.aborted) {
+          patchAt({ content: "Stopped." })
+        } else {
+          patchAt({ content: `⚠ ${e instanceof Error ? e.message : "The answer failed."}`, error: true })
+        }
       } finally {
-        setPending(false)
+        if (!ac.signal.aborted) setPending(false)
       }
     },
     [messages],
@@ -445,15 +456,25 @@ export function useSecondBrainChat() {
   const reset = useCallback(() => {
     abortRef.current?.abort()
     setMessages([])
+    setPending(false)
   }, [])
 
   return { messages, pending, send, reset }
 }
 
-/** Streaming daily review: partials render live; the final one persists server-side. */
+/** The streamed daily review is a DailyReviewOutput, not yet a score row. */
+export interface DailyReviewPartial {
+  llm_nudge: number
+  nudge_rationale: string
+  feedback: string
+  key_insight: string
+  suggested_action_for_tomorrow: string
+}
+
+/** Streaming daily review: partials render live (keyed by day); the final one persists server-side. */
 export function useDailyRollupStream() {
   const qc = useQueryClient()
-  const [partial, setPartial] = useState<DailyScoreResponse | null>(null)
+  const [partial, setPartial] = useState<{ day: string; output: DailyReviewPartial } | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -463,7 +484,7 @@ export function useDailyRollupStream() {
     setError(null)
     try {
       for await (const { event, data } of sseEvents(`/agents/rollup/daily/stream?day=${day}`, {})) {
-        if (event === "partial") setPartial(data)
+        if (event === "partial") setPartial({ day, output: data })
         else if (event === "done") {
           setPartial(null)
           qc.invalidateQueries({ queryKey: ["scores-daily", day] })
