@@ -1,19 +1,20 @@
 import { Bot, Gauge, ListChecks, Sparkles, Timer } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useDailyRollup, useDailyScore } from "@/hooks/api"
+import { useDailyRollupStream, useDailyScore } from "@/hooks/api"
 import { formatDuration } from "@/lib/dates"
 import { cn } from "cn"
 
 /**
  * The deterministic score + the AI's qualitative layer (plan §3.4/§6.3.1):
- * breakdown is always live; "Run AI review" persists the rollup with the
- * bounded ±10 nudge, feedback and insight.
+ * breakdown is always live; "Run AI review" streams the rollup (partial
+ * feedback appears as it generates) and persists the final ±10-nudged score.
  */
 export function DailyReviewCard({ day }: { day: string }) {
   const score = useDailyScore(day, true)
-  const rollup = useDailyRollup()
+  const rollup = useDailyRollupStream()
 
+  const live = rollup.partial // streamed, not yet persisted
   const m = score.data?.metrics
 
   return (
@@ -45,17 +46,24 @@ export function DailyReviewCard({ day }: { day: string }) {
               {m.habits_completed}/{m.habits_scheduled} habits
             </Badge>
           )}
-          {score.data && score.data.llm_nudge !== 0 && (
+          {(score.data?.llm_nudge ?? live?.llm_nudge) !== 0 && (
             <Badge variant="outline" className="gap-1 text-primary">
-              nudge {score.data.llm_nudge > 0 ? "+" : ""}
-              {score.data.llm_nudge.toFixed(1)}
+              nudge {(score.data?.llm_nudge ?? live?.llm_nudge ?? 0) > 0 ? "+" : ""}
+              {(score.data?.llm_nudge ?? live?.llm_nudge ?? 0).toFixed(1)}
             </Badge>
           )}
         </div>
       )}
 
-      {score.data?.feedback && <p className="mt-3 text-sm leading-relaxed">{score.data.feedback}</p>}
-      {score.data?.insight && (
+      {live?.feedback && <p className="mt-3 text-sm leading-relaxed opacity-80">{live.feedback}</p>}
+      {live?.insight && (
+        <p className="mt-2 flex items-start gap-1.5 text-sm text-primary/90">
+          <Sparkles className="mt-0.5 size-3.5 shrink-0" />
+          {live.insight}
+        </p>
+      )}
+      {!live && score.data?.feedback && <p className="mt-3 text-sm leading-relaxed">{score.data.feedback}</p>}
+      {!live && score.data?.insight && (
         <p className="mt-2 flex items-start gap-1.5 text-sm text-primary/90">
           <Sparkles className="mt-0.5 size-3.5 shrink-0" />
           {score.data.insight}
@@ -63,19 +71,15 @@ export function DailyReviewCard({ day }: { day: string }) {
       )}
 
       <div className="mt-3 flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="xs"
-          disabled={rollup.isPending}
-          onClick={() => rollup.mutate(day)}
-        >
-          <Bot className={cn(rollup.isPending && "animate-pulse")} />
-          {rollup.isPending ? "Reviewing…" : "Run AI review"}
+        <Button variant="outline" size="xs" disabled={rollup.pending} onClick={() => rollup.review(day)}>
+          <Bot className={cn(rollup.pending && "animate-pulse")} />
+          {rollup.pending ? "Reviewing…" : "Run AI review"}
         </Button>
         <span className="text-[11px] text-muted-foreground">
           sends today's entry to your AI provider; adjusts the score by at most ±10
         </span>
       </div>
+      {rollup.error && <p className="mt-2 text-xs text-red-400">AI review failed: {rollup.error}</p>}
     </div>
   )
 }

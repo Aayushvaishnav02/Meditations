@@ -310,6 +310,13 @@ CREATE TABLE monthly_summaries (
 
 The AI subsystem allows switching providers on the fly (cloud Claude/OpenAI, OpenRouter, or local Ollama) by configuring `base_url` and `api_key` via environment variables (`.env`) or database settings.
 
+Personal gateways rate-limit aggressively and often mask upstream 429s as HTTP
+503s; pydantic-ai's `retries=` only covers validation/tool retries. The factory
+therefore wraps every model in `ResilientModel` (spaced retries on 429/5xx,
+`app/ai_factory.py`) and user-facing surfaces translate failures via
+`describe_ai_error()` (rate limit / auth / unreachable). The settings
+connection-test runs with `resilient=False` so misconfiguration fails fast.
+
 ```python
 from typing import Optional
 from pydantic_settings import BaseSettings
@@ -460,6 +467,13 @@ breakdown_agent = Agent(
 - [x] Integrate `sqlite-vec` or `fastembed` for hybrid semantic and keyword search.
 - [x] Wrap frontend in **Tauri v2** for lightweight Linux desktop tray and system-wide hotkeys.
 - [x] Implement dark-mode glass styling and fluid Framer Motion transitions.
+
+### Phase 6: AI UX — RAG chat, streaming, editor assists, model routing — `feat/ai-ux` ✅
+- [x] **Ask my second brain** (§6.3.5): `/api/agents/ask/stream` retrieves via hybrid search (6 sources, 1200 chars each) and streams a cited answer (`[n]` markers) over SSE; Second Brain UI has Ask/Search modes, clickable citations and bounded client-held chat history (last 6 turns × 1000 chars).
+- [x] **Streaming everywhere** (§6.3.1/§6.3.3): SSE variants for daily review (`rollup/daily/stream`, persists the final partial — upsert) and briefing; SSE framing in `app/sse.py`, consumed via plain fetch + ReadableStream (`frontend/src/lib/stream.ts`). Event protocol: `partial` → `done` / `error`.
+- [x] **Editor AI assists**: slash-menu actions (improve / continue / summarize whole entry) stream into an accept/discard preview panel above the day score; apply = `setContent` → debounced save.
+- [x] **Model routing + prompts + usage**: fast tier `ai_fast_model_name` (capture/briefing/Q&A/assists), per-agent system-prompt overrides (`prompt_*` app_settings, `GET/PUT /api/settings/ai/prompts`), token/duration telemetry (`ai_usage` table, `GET /api/settings/ai/usage?days=`).
+- [x] **Gateway resilience**: `ResilientModel` retries 429/5xx and connection errors with spaced backoff (Antigravity masks upstream 429s as 503s); `describe_ai_error()` renders human-readable failures in the UI; connection test uses `resilient=False`.
 
 ---
 

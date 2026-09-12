@@ -141,7 +141,8 @@ def _doc_meta(doc_id: str) -> tuple[str, str, str]:
     return f"Monthly review {key}", key, kind
 
 
-async def _content_for(session: AsyncSession, doc_id: str) -> str:
+async def content_for(session: AsyncSession, doc_id: str) -> str:
+    """Full stored markdown for a document (used to build Q&A context)."""
     kind, _, key = doc_id.partition(":")
     if kind == "journal":
         entry = await session.get(JournalEntry, dt.date.fromisoformat(key))
@@ -244,7 +245,7 @@ async def search(session: AsyncSession, q: str, limit: int = 20) -> list[SearchH
         snip = fts_hits.get(doc_id, (None, ""))[1]
         sources = [s for s, m in (("fts", fts_hits), ("semantic", sem_hits)) if doc_id in m]
         if not snip:
-            content = await _content_for(session, doc_id)
+            content = await content_for(session, doc_id)
             snip = content[:240] + ("…" if len(content) > 240 else "")
         title, date, kind = _doc_meta(doc_id)
         hits.append(

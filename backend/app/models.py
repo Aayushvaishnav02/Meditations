@@ -128,3 +128,17 @@ class AppSetting(SQLModel, table=True):
     key: str = Field(primary_key=True)
     value: str
     updated_at: datetime = Field(default_factory=utc_now)
+
+
+class AiUsage(SQLModel, table=True):
+    """Token/duration telemetry for every LLM call (observability only)."""
+
+    __tablename__ = "ai_usage"
+
+    id: str = Field(default_factory=new_id, primary_key=True)
+    ts: datetime = Field(default_factory=utc_now, index=True)
+    agent: str = Field(index=True)  # daily | weekly | monthly | decompose | capture | briefing | ask | assist | test
+    model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    duration_ms: int = 0

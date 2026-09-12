@@ -24,6 +24,7 @@ class AISettings(BaseSettings):
 
     ai_provider: str = "openai_compatible"  # "openai_compatible" | "anthropic"
     ai_model_name: str = "llama3.2:3b"
+    ai_fast_model_name: str | None = None  # cheap tier for capture/briefing/assist; None = ai_model_name
     ai_base_url: str | None = "http://localhost:11434/v1"  # Ollama/OpenRouter/Groq/vLLM
     ai_api_key: str | None = "ollama"
 

@@ -105,6 +105,7 @@ export interface SearchHit {
 export interface AISettingsView {
   provider: string
   model_name: string
+  fast_model_name: string | null
   base_url: string | null
   api_key_set: boolean
 }
@@ -195,6 +196,35 @@ export interface SearchStatus {
   fts: boolean
   semantic: boolean
   indexed_docs: number
+}
+
+export interface CitationSource {
+  n: number
+  doc_id: string
+  title: string
+  date: string
+  kind: "journal" | "weekly" | "monthly"
+}
+
+export interface PromptEntry {
+  key: string
+  default: string
+  override: string | null
+}
+
+export interface AiUsageByAgent {
+  agent: string
+  calls: number
+  input_tokens: number
+  output_tokens: number
+}
+
+export interface AiUsageView {
+  days: number
+  calls: number
+  input_tokens: number
+  output_tokens: number
+  by_agent: AiUsageByAgent[]
 }
 
 export const LIST_COLORS = [

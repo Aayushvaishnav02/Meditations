@@ -4,14 +4,14 @@ import StarterKit from "@tiptap/starter-kit"
 import { Placeholder } from "@tiptap/extensions"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { Markdown } from "tiptap-markdown"
-import { Check, ChevronLeft, ChevronRight, ListChecks, Sparkles } from "lucide-react"
+import { Check, ChevronLeft, ChevronRight, ListChecks, Sparkles, Wand2, X } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { MiniMonth } from "@/components/journal-calendar"
 import { JournalCalendar } from "@/components/journal-calendar-view"
 import { DailyReviewCard } from "@/components/daily-review-card"
 import { Button } from "@/components/ui/button"
-import { useJournalActivity, useJournalDays, useJournalEntry, useSaveJournal } from "@/hooks/api"
-import { SlashCommands } from "@/components/slash-command"
+import { useEditorAssist, useJournalActivity, useJournalDays, useJournalEntry, useSaveJournal } from "@/hooks/api"
+import { SlashCommands, type AssistAction } from "@/components/slash-command"
 import { formatDuration } from "@/lib/dates"
 import { useUi } from "@/stores/ui"
 import { useQueryClient } from "@tanstack/react-query"
@@ -103,6 +103,9 @@ export function JournalView() {
   const [loadedDay, setLoadedDay] = useState<string | null>(null)
   const [openPopover, setOpenPopover] = useState(false)
   const [mode, setMode] = useState<"editor" | "calendar">("editor")
+  // AI assist preview: which action is being streamed into the panel
+  const assist = useEditorAssist()
+  const [assistView, setAssistView] = useState<AssistAction | null>(null)
   // markdown baseline after the last load: setContent-driven updates must not re-save
   const baselineMdRef = useRef<string>("")
   const saveTimer = useRef<number | null>(null)
@@ -128,6 +131,9 @@ export function JournalView() {
       SlashCommands.configure({
         onActivity: (ed) => {
           void insertActivity(ed)
+        },
+        onAI: (ed, action) => {
+          void runAssist(ed, action)
         },
       }),
     ],
@@ -221,6 +227,40 @@ export function JournalView() {
     const current = getMarkdown(editor)
     const glue = current.trim().length === 0 ? "" : "\n\n"
     editor.commands.setContent(current + glue + REFLECTION_TEMPLATE)
+  }
+
+  /** Whole-entry AI assist; streams into the preview panel (see AssistPanel). */
+  async function runAssist(ed: Editor | null, action: AssistAction) {
+    if (!ed || assist.pending) return
+    if (!getMarkdown(ed).trim()) {
+      toast.error("Nothing to assist yet — write something first")
+      return
+    }
+    setAssistView(action)
+    await assist.run(action, getMarkdown(ed))
+  }
+
+  function acceptAssist() {
+    if (!editor || !assistView || assist.text == null) return
+    const md = assist.text.trim()
+    if (!md) {
+      toast.error("The AI returned nothing")
+      return
+    }
+    const current = getMarkdown(editor)
+    const glue = current.trim().length === 0 || assistView !== "continue" ? "" : "\n\n"
+    const next = assistView === "continue" ? current + glue + md : md
+    // setContent fires onUpdate -> scheduleSave; the changed markdown saves for real.
+    editor.commands.setContent(next)
+    baselineMdRef.current = getMarkdown(editor)
+    setAssistView(null)
+    assist.clear()
+    toast.success(assistView === "continue" ? "Continuation added" : "Entry updated")
+  }
+
+  function discardAssist() {
+    setAssistView(null)
+    assist.clear()
   }
 
   const dateLabel = useMemo(
@@ -336,6 +376,30 @@ export function JournalView() {
       <div className="glass mt-3 rounded-2xl px-5 py-4">
         <EditorContent editor={editor} />
       </div>
+
+      {assistView && (
+        <div className="glass mt-3 rounded-2xl border border-primary/30 px-5 py-4">
+          <div className="flex items-center gap-2">
+            <Wand2 className="size-4 text-primary" />
+            <h3 className="text-sm font-semibold capitalize">AI {assistView}</h3>
+            {assist.pending && <Sparkles className="size-3 animate-pulse text-primary" />}
+            {!assist.pending && assist.error && (
+              <span className="text-xs text-red-400">{assist.error}</span>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="outline" size="xs" disabled={assist.pending} onClick={discardAssist}>
+                <X /> Discard
+              </Button>
+              <Button variant="outline" size="xs" disabled={assist.pending || !assist.text?.trim()} onClick={acceptAssist}>
+                <Check /> Accept
+              </Button>
+            </div>
+          </div>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed opacity-90">
+            {assist.text?.trim() || <span className="text-muted-foreground">Working on your entry…</span>}
+          </p>
+        </div>
+      )}
 
       <DailyReviewCard day={day} />
 

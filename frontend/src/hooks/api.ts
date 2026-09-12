@@ -1,10 +1,14 @@
+import { useCallback, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { api, ApiError } from "@/api/client"
+import { sseEvents } from "@/lib/stream"
 import type {
   AIConnectionTest,
+  AiUsageView,
   Briefing,
   CaptureResult,
+  CitationSource,
   DailyScoreResponse,
   InsightsResponse,
   AISettingsView,
@@ -13,6 +17,7 @@ import type {
   JournalDay,
   JournalEntry,
   JournalInput,
+  PromptEntry,
   SearchHit,
   SearchStatus,
   Task,
@@ -175,7 +180,7 @@ export function useAISettings(enabled: boolean) {
 export function useSaveAISettings() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { provider: string; model_name: string; base_url: string | null; api_key?: string }) =>
+    mutationFn: (input: { provider: string; model_name: string; fast_model_name?: string; base_url: string | null; api_key?: string }) =>
       api.put<AISettingsView>("/settings/ai", input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ai-settings"] })
@@ -241,29 +246,6 @@ export function useDailyScore(day: string, enabled: boolean) {
     queryKey: ["scores-daily", day],
     queryFn: () => api.get<DailyScoreResponse>(`/scores/daily/${day}`),
     enabled,
-  })
-}
-
-export function useDailyRollup() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (day: string) => api.post<DailyScoreResponse>(`/agents/rollup/daily?day=${day}`, {}),
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["scores-daily", data.date] })
-      qc.invalidateQueries({ queryKey: ["journal-days"] })
-      toast.success(`Daily review saved — score ${data.final_score.toFixed(1)}`)
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "AI review failed"),
-  })
-}
-
-export function useBriefing() {
-  return useMutation({
-    mutationFn: () => api.post<Briefing>("/agents/briefing", {}),
-    onError: (e) =>
-      toast.error("Briefing failed", {
-        description: e instanceof Error && e.message ? e.message : "Is the AI provider reachable?",
-      }),
   })
 }
 
@@ -415,5 +397,183 @@ export function useDeleteList() {
       qc.invalidateQueries({ queryKey: qk.lists })
       qc.invalidateQueries({ queryKey: qk.tasks })
     },
+  })
+}
+
+// --- streaming AI surfaces (SSE over fetch; imperative session state, not query cache) ---
+export interface ChatMessage {
+  role: "user" | "assistant"
+  content: string
+  sources?: CitationSource[]
+}
+
+/** Ask-my-second-brain chat: answers stream in with citation sources attached. */
+export function useSecondBrainChat() {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [pending, setPending] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
+
+  const send = useCallback(
+    async (question: string) => {
+      const history = messages.map((m) => ({ role: m.role, content: m.content }))
+      setMessages((m) => [...m, { role: "user", content: question }, { role: "assistant", content: "" }])
+      setPending(true)
+      abortRef.current?.abort()
+      const ac = new AbortController()
+      abortRef.current = ac
+      const updateLast = (patch: Partial<ChatMessage>) =>
+        setMessages((m) => {
+          const copy = [...m]
+          copy[copy.length - 1] = { ...copy[copy.length - 1], ...patch }
+          return copy
+        })
+      try {
+        for await (const { event, data } of sseEvents("/agents/ask/stream", { question, history }, ac.signal)) {
+          if (event === "partial") updateLast({ content: data.text })
+          else if (event === "sources") updateLast({ sources: data })
+          else if (event === "error") throw new Error(data.message)
+        }
+      } catch (e) {
+        updateLast({ content: `⚠ ${e instanceof Error ? e.message : "The answer failed."}` })
+      } finally {
+        setPending(false)
+      }
+    },
+    [messages],
+  )
+
+  const reset = useCallback(() => {
+    abortRef.current?.abort()
+    setMessages([])
+  }, [])
+
+  return { messages, pending, send, reset }
+}
+
+/** Streaming daily review: partials render live; the final one persists server-side. */
+export function useDailyRollupStream() {
+  const qc = useQueryClient()
+  const [partial, setPartial] = useState<DailyScoreResponse | null>(null)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function review(day: string) {
+    setPending(true)
+    setPartial(null)
+    setError(null)
+    try {
+      for await (const { event, data } of sseEvents(`/agents/rollup/daily/stream?day=${day}`, {})) {
+        if (event === "partial") setPartial(data)
+        else if (event === "done") {
+          setPartial(null)
+          qc.invalidateQueries({ queryKey: ["scores-daily", day] })
+          qc.invalidateQueries({ queryKey: ["journal-days"] })
+          toast.success(`Daily review saved — score ${data.final_score.toFixed(1)}`)
+        } else if (event === "error") throw new Error(data.message)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "AI review failed")
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return { partial, pending, error, review }
+}
+
+/** Streaming morning briefing. */
+export function useBriefingStream() {
+  const [partial, setPartial] = useState<Briefing | null>(null)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function generate() {
+    setPending(true)
+    setPartial(null)
+    setError(null)
+    try {
+      for await (const { event, data } of sseEvents("/agents/briefing/stream", {})) {
+        if (event === "partial") setPartial(data)
+        else if (event === "done") setPartial(data)
+        else if (event === "error") throw new Error(data.message)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Briefing failed")
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return { partial, pending, error, generate }
+}
+
+export type AssistAction = "improve" | "continue" | "summarize"
+
+/** Editor assist: streams the proposed markdown into `text`; caller decides accept/discard. */
+export function useEditorAssist() {
+  const [text, setText] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function run(action: AssistAction, source: string): Promise<string | null> {
+    setPending(true)
+    setError(null)
+    setText("")
+    try {
+      let final: string | null = null
+      for await (const { event, data } of sseEvents("/agents/assist/stream", { action, text: source })) {
+        if (event === "partial") setText(data.text)
+        else if (event === "done") {
+          final = data.text
+          setText(data.text)
+        } else if (event === "error") throw new Error(data.message)
+      }
+      return final
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "The assist failed."
+      setError(message)
+      setText(null)
+      toast.error("AI assist failed", { description: message })
+      return null
+    } finally {
+      setPending(false)
+    }
+  }
+
+  const clear = useCallback(() => {
+    setText(null)
+    setError(null)
+  }, [])
+
+  return { text, pending, error, run, clear }
+}
+
+// --- AI settings: prompts + usage ---
+export function usePrompts(enabled: boolean) {
+  return useQuery({
+    queryKey: ["ai-prompts"],
+    queryFn: () => api.get<{ prompts: PromptEntry[] }>("/settings/ai/prompts"),
+    enabled,
+  })
+}
+
+export function useSavePrompts() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (overrides: Record<string, string | null>) =>
+      api.put<{ prompts: PromptEntry[] }>("/settings/ai/prompts", { overrides }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai-prompts"] })
+      toast.success("Prompts saved")
+    },
+    onError: () => toast.error("Couldn't save prompts"),
+  })
+}
+
+export function useAIUsage(days: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["ai-usage", days],
+    queryFn: () => api.get<AiUsageView>(`/settings/ai/usage?days=${days}`),
+    enabled,
   })
 }

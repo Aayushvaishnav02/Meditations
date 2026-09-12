@@ -20,8 +20,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(0, "Cannot reach the API. Is the backend running?")
   }
   if (!res.ok) {
-    const detail = await res.text().catch(() => "")
-    throw new ApiError(res.status, detail || `${res.status} ${res.statusText}`)
+    const text = await res.text().catch(() => "")
+    let message = text || `${res.status} ${res.statusText}`
+    try {
+      // FastAPI error envelope: {"detail": "..."}
+      const parsed = JSON.parse(text)
+      if (typeof parsed?.detail === "string") message = parsed.detail
+    } catch {
+      // non-JSON body — keep the raw text
+    }
+    throw new ApiError(res.status, message)
   }
   if (res.status === 204) return undefined as T
   return (await res.json()) as T
