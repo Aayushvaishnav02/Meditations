@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react"
 import {
   Bot,
+  Check,
   CheckCircle2,
+  ChevronDown,
   Coins,
   Gauge,
   Palette,
@@ -16,6 +18,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   useAIUsage,
   useAppPrefs,
@@ -331,7 +339,7 @@ function ThemeSwatch({ id }: { id: Theme }) {
   return (
     <span
       className={cn(
-        "flex h-5 w-8 shrink-0 overflow-hidden rounded border border-border/60",
+        "flex h-4 w-7 shrink-0 overflow-hidden rounded border border-border/60",
         meta.dark && "dark",
         id !== "dark" && id !== "light" && `theme-${id}`,
       )}
@@ -347,26 +355,31 @@ function ThemeSwatch({ id }: { id: Theme }) {
 function AppearanceCard() {
   const theme = useUi((s) => s.theme)
   const setTheme = useUi((s) => s.setTheme)
+  const current = THEMES.find((t) => t.id === theme) ?? THEMES[0]
   return (
     <Card title="Appearance" icon={Palette}>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {THEMES.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTheme(t.id)}
-            aria-pressed={theme === t.id}
-            className={cn(
-              "flex items-center gap-2 rounded-lg border px-2.5 py-2 text-xs transition-colors",
-              theme === t.id
-                ? "border-primary/50 bg-primary/10 text-foreground"
-                : "border-[var(--glass-border)] text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <ThemeSwatch id={t.id} />
-            <span className="truncate">{t.label}</span>
-          </button>
-        ))}
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" size="sm" className="w-60 justify-between" aria-label={`Theme: ${current.label}`} />
+          }
+        >
+          <span className="flex items-center gap-2">
+            <ThemeSwatch id={current.id} />
+            {current.label}
+          </span>
+          <ChevronDown className="size-3.5 text-muted-foreground" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-60">
+          {THEMES.map((t) => (
+            <DropdownMenuItem key={t.id} onClick={() => setTheme(t.id)}>
+              <ThemeSwatch id={t.id} />
+              <span className="flex-1">{t.label}</span>
+              {theme === t.id && <Check className="size-3.5" />}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </Card>
   )
 }
