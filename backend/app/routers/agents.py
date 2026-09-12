@@ -598,6 +598,7 @@ async def editor_assist(body: AssistRequest, session: SessionDep):
             text = ""
             async for chunk in agents.stream_assist(
                 deps,
+                model=await _request_model(session, fast=True),
                 system_prompt=overrides.get(f"assist_{body.action}"),
                 on_usage=make_recorder(session),
             ):
