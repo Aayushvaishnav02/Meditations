@@ -243,6 +243,7 @@ async def rollup_weekly(session: SessionDep, week_start: dt.date | None = None):
     ).first()
 
     trend = trend_of(scores)
+    overrides = await load_prompt_overrides(session)
     review: agents.WeeklyReviewOutput = await _llm_call(
         agents.run_weekly_review(
             agents.WeeklyDeps(
@@ -253,6 +254,8 @@ async def rollup_weekly(session: SessionDep, week_start: dt.date | None = None):
                 trend=trend,
             ),
             model=await _request_model(session),
+            system_prompt=overrides.get("weekly"),
+            on_usage=make_recorder(session),
         )
     )
 

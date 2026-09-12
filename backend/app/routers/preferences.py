@@ -35,7 +35,7 @@ async def test_ai_connection(session: SessionDep):
     started = time.monotonic()
     try:
         agent: Agent[None, str] = Agent(
-            create_agent_model(settings),
+            create_agent_model(settings, resilient=False),
             output_type=str,
             system_prompt='Reply with exactly: OK',
             retries=0,

@@ -49,7 +49,7 @@ def test_fts_finds_updates_and_delete_removes(client):
 def test_phrase_query_and_multiple_kinds(client, monkeypatch):
     import app.agents as agents
 
-    async def fake_runner(deps, model=None):
+    async def fake_runner(deps, model=None, system_prompt=None, on_usage=None):
         return agents.WeeklyReviewOutput(wins="Refactored the parser core", misses="", carried_action_items="")
 
     monkeypatch.setattr(agents, "run_weekly_review", fake_runner)

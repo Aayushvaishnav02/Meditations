@@ -17,6 +17,8 @@ import app.agents as agents
 from app.ai_factory import PROMPT_KEYS, create_agent_model
 from app.config import AISettings
 from app.models import DailyScore
+from app.routers import preferences
+from app.util import monday_of, utc_now
 
 
 def parse_sse(text: str) -> list[tuple[str, dict]]:
@@ -90,6 +92,56 @@ def test_daily_rollup_uses_prompt_override(client, monkeypatch):
     # the usage rows written by the stub's on_usage callback (one per rollup)
     rows = client.get("/api/settings/ai/usage?days=1").json()
     assert rows["calls"] == 2 and rows["by_agent"][0]["agent"] == "daily"
+
+
+def test_weekly_rollup_uses_prompt_override(client, monkeypatch):
+    """Weekly was the one call site missing the override + usage wiring."""
+    captured = {}
+
+    async def fake(deps, model=None, system_prompt=None, on_usage=None):
+        captured["system_prompt"] = system_prompt
+        if on_usage:
+            await on_usage(agents.UsageReport(agent="weekly", model="stub", input_tokens=10, output_tokens=5, duration_ms=12))
+        return agents.WeeklyReviewOutput()
+
+    monkeypatch.setattr(agents, "run_weekly_review", fake)
+    week = monday_of(utc_now().date())
+    make_entry(client, week.isoformat(), "text")
+    assert client.post("/api/agents/rollup/weekly", params={"week_start": week.isoformat()}).status_code == 200
+    assert captured["system_prompt"] is None  # no override yet
+
+    client.put("/api/settings/ai/prompts", json={"overrides": {"weekly": "Custom weekly prompt."}})
+    assert client.post("/api/agents/rollup/weekly", params={"week_start": week.isoformat()}).status_code == 200
+    assert captured["system_prompt"] == "Custom weekly prompt."
+
+    rows = client.get("/api/settings/ai/usage?days=1").json()
+    assert rows["calls"] == 2 and rows["by_agent"][0]["agent"] == "weekly"
+
+
+def test_connection_test_fails_fast(client, monkeypatch):
+    """The test button must not sit through ResilientModel quota retries —
+    AGENTS.md: the connection test uses resilient=False to fail fast."""
+    captured = {}
+
+    def fake_create(settings, resilient=True, fast=False):
+        captured["resilient"] = resilient
+        return object()
+
+    class FakeAgent:
+        def __init__(self, model, **kwargs):
+            pass
+
+        async def run(self, prompt):
+            class R:
+                output = "OK"
+
+            return R()
+
+    monkeypatch.setattr(preferences, "create_agent_model", fake_create)
+    monkeypatch.setattr(preferences, "Agent", FakeAgent)
+    body = client.post("/api/settings/ai/test").json()
+    assert body["ok"] is True
+    assert captured["resilient"] is False
 
 
 # --- streaming: ask ---

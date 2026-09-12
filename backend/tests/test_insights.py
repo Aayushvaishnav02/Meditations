@@ -77,7 +77,7 @@ def test_insights_habit_streaks_and_rate(client):
 def test_insights_includes_rollups(client, monkeypatch):
     import app.agents as agents
 
-    async def fake_weekly(deps, model=None):
+    async def fake_weekly(deps, model=None, system_prompt=None, on_usage=None):
         return agents.WeeklyReviewOutput(wins="w", misses="m", carried_action_items="c")
 
     monkeypatch.setattr(agents, "run_weekly_review", fake_weekly)
