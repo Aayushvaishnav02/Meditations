@@ -19,7 +19,7 @@ def llm_daily(monkeypatch):
     """Stub the daily runner; records calls and returns a fixed nudge."""
     calls = []
 
-    async def fake(deps, model=None):
+    async def fake(deps, model=None, **kwargs):
         calls.append(deps)
         return agents.DailyReviewOutput(
             llm_nudge=8.0,
@@ -76,7 +76,7 @@ def test_daily_rollup_without_entry_404(client, llm_daily):
 # --- weekly rollup ---
 @pytest.fixture()
 def llm_weekly(monkeypatch):
-    async def fake(deps, model=None):
+    async def fake(deps, model=None, **kwargs):
         return agents.WeeklyReviewOutput(
             wins="Shipped the schema\nRan 4 times", misses="Late nights", carried_action_items="Keep the 25m pomodoros"
         )
@@ -107,7 +107,7 @@ def test_weekly_rollup_empty_week_404(client, llm_weekly):
 
 # --- monthly rollup ---
 def test_monthly_rollup_from_weeks(client, llm_weekly, monkeypatch):
-    async def fake_monthly(deps, model=None):
+    async def fake_monthly(deps, model=None, **kwargs):
         assert len(deps.weeks) >= 2, "monthly agent needs the week rollups"
         return agents.MonthlyReviewOutput(narrative="A month of steady build-up.")
 
@@ -131,7 +131,7 @@ def test_monthly_rollup_from_weeks(client, llm_weekly, monkeypatch):
 
 
 def test_monthly_rollup_without_weeks_404(client, monkeypatch):
-    async def fake(deps, model=None):
+    async def fake(deps, model=None, **kwargs):
         raise AssertionError("must not be called")
 
     monkeypatch.setattr(agents, "run_monthly_review", fake)
@@ -141,7 +141,7 @@ def test_monthly_rollup_without_weeks_404(client, monkeypatch):
 
 # --- decomposition ---
 def test_decompose_creates_subtasks(client, monkeypatch):
-    async def fake(title, description, today, model=None):
+    async def fake(title, description, today, model=None, **kwargs):
         return agents.DecompositionOutput(
             subtasks=[
                 agents.SubtaskItem(title="Draft outline", estimated_minutes=30, priority=2),
@@ -169,7 +169,7 @@ def test_decompose_unknown_task(client):
 
 # --- capture ---
 def test_capture_creates_tasks_and_journal_snippet(client, monkeypatch):
-    async def fake(text, today, model=None):
+    async def fake(text, today, model=None, **kwargs):
         return agents.CaptureOutput(
             tasks=[
                 agents.CapturedTask(title="Email Alex the deck", due_date=today.isoformat(), due_time="16:00", priority=3, tags=["work"]),
@@ -199,7 +199,7 @@ def test_capture_creates_tasks_and_journal_snippet(client, monkeypatch):
 
 # --- briefing ---
 def test_briefing(client, monkeypatch):
-    async def fake(deps, model=None):
+    async def fake(deps, model=None, **kwargs):
         assert isinstance(deps, dict) and "overdue_tasks" in deps
         return agents.BriefingOutput(
             top_focus=["Finish the schema migration", "Reply to Alex", "30 min review"],

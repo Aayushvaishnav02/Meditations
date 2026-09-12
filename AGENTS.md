@@ -12,7 +12,7 @@ sync when behavior changes.
 | Path | Contents |
 |---|---|
 | `backend/` | FastAPI + SQLite (WAL) + FTS5 + sqlite-vec + PydanticAI |
-| `backend/app/` | `models.py` (all tables), `scoring.py` (deterministic score), `telemetry.py` (day aggregation), `search.py` (hybrid FTS+vec), `agents.py` (LLM runners), `recurrence.py`, `ai_factory.py`, `db.py` |
+| `backend/app/` | `models.py` (all tables), `scoring.py` (deterministic score), `telemetry.py` (day aggregation), `search.py` (hybrid FTS+vec), `agents.py` (LLM runners), `ai_factory.py` (model factory + retry/transport), `ai_usage.py` (token telemetry), `sse.py` (SSE framing), `recurrence.py`, `db.py` |
 | `backend/app/routers/` | One module per resource; `deps.py` holds `SessionDep` |
 | `frontend/src/` | React 19 + Vite + Tailwind v4 + shadcn v4 (Base UI) + TipTap v3 |
 | `frontend/src/hooks/api.ts` | ALL React Query hooks with optimistic updates |
@@ -75,11 +75,36 @@ npm run tauri dev | build                      # desktop shell (needs rust + web
   completion; the finished instance stays completed so telemetry survives.
 - **A journal day without an entry has no score row.** `daily_scores` rows are
   written only by the daily-rollup agent; everything else computes live.
+  Re-running a review UPSERTS the row (`_persist_daily`) — the date is the PK.
+- **Streaming AI endpoints** (`/api/agents/*/stream`) speak SSE: `partial`
+  (cumulative text or partial object) → `done` (final payload) or `error`
+  (human-readable via `describe_ai_error`). Frontend consumes them with plain
+  fetch + ReadableStream (`lib/stream.ts`), no EventSource (POST bodies).
+- **Two model tiers**: the main model (reviews, decomposition) and the fast
+  tier (`ai_fast_model_name`, used by capture/briefing/Q&A/assists; falls back
+  to the main model). Both go through `ResilientModel` (retries 429/5xx +
+  connection errors; streams only retry before the first yielded chunk).
+- **Prompt overrides** live in `app_settings` as `prompt_<key>`; `PROMPT_KEYS`
+  (ai_factory) and `PROMPT_DEFAULTS` (agents.py) must stay in sync — asserted
+  in tests. Every runner accepts `system_prompt=` and `on_usage=` overrides.
 
 ## Architecture traps (these caused real bugs; do not reintroduce them)
 
 - **pydantic-ai v2** (not 0.x): `OpenAIChatModel` + provider objects carry
   `base_url`/`api_key`; agents use `output_type=`, results in `result.output`.
+- **Personal AI gateways mask upstream 429s as HTTP 503** (Antigravity, some
+  Ollama proxies) and rate-limit aggressively; pydantic-ai's `retries=` does
+  NOT cover HTTP errors. `create_agent_model()` wraps every model in
+  `ResilientModel` (spaced retries on 429/5xx + connection errors, one retry
+  timed to the gateway's "reset after 4m 21s" hint, capped at
+  `RESET_RETRY_CAP_SECONDS`); user-facing errors go through
+  `describe_ai_error()`. The connection test uses `resilient=False` to fail
+  fast. Don't unwrap these without a plan for rate limits.
+- **`create_agent_model()` with no arguments uses ENV defaults** — it cannot
+  see the provider the user configured in Settings (app_settings rows).
+  Request paths MUST build models via `load_ai_settings(session)` first
+  (routers/agents.py `_request_model`). Skipping this shipped once: the test
+  button passed while every real feature dialed the env-default Ollama.
 - **tiptap v3**: StarterKit is one configurable class (no task lists — add
   `TaskList`/`TaskItem` from `@tiptap/extension-list`); markdown storage via
   `tiptap-markdown`; `editor.storage.markdown.getMarkdown()` needs a cast.

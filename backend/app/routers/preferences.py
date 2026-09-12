@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pydantic_ai import Agent
 from sqlmodel import SQLModel
 
-from app.ai_factory import create_agent_model, load_ai_settings
+from app.ai_factory import create_agent_model, describe_ai_error, load_ai_settings
 from app.models import AppSetting
 from app.routers.deps import SessionDep
 from app.util import utc_now
@@ -51,7 +51,7 @@ async def test_ai_connection(session: SessionDep):
         return AIConnectionTest(
             ok=False,
             model=settings.ai_model_name,
-            error=str(exc)[:400],
+            error=describe_ai_error(exc),
             latency_ms=int((time.monotonic() - started) * 1000),
         )
 

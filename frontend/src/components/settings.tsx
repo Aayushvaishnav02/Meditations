@@ -1,16 +1,32 @@
 import { useEffect, useState } from "react"
-import { Bot, CheckCircle2, Gauge, RefreshCw, RotateCcw, Save, Search, Sun, Moon, XCircle } from "lucide-react"
+import {
+  Bot,
+  CheckCircle2,
+  Coins,
+  Gauge,
+  RefreshCw,
+  RotateCcw,
+  Save,
+  ScrollText,
+  Search,
+  Sun,
+  Moon,
+  XCircle,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import {
+  useAIUsage,
   useAppPrefs,
   useAISettings,
+  usePrompts,
   useResetAISettings,
   useReindex,
   useSaveAISettings,
   useSaveAppPrefs,
+  useSavePrompts,
   useSearchStatus,
   useTestAI,
 } from "@/hooks/api"
@@ -47,6 +63,7 @@ function AISettingsCard() {
 
   const [provider, setProvider] = useState("openai_compatible")
   const [modelName, setModelName] = useState("")
+  const [fastModelName, setFastModelName] = useState("")
   const [baseUrl, setBaseUrl] = useState("")
   const [apiKey, setApiKey] = useState("") // never prefilled; empty means "unchanged"
 
@@ -54,6 +71,7 @@ function AISettingsCard() {
     if (!ai.data) return
     setProvider(ai.data.provider)
     setModelName(ai.data.model_name)
+    setFastModelName(ai.data.fast_model_name ?? "")
     setBaseUrl(ai.data.base_url ?? "")
   }, [ai.data])
 
@@ -71,7 +89,7 @@ function AISettingsCard() {
               <option value="anthropic">Anthropic</option>
             </select>
           </Field>
-          <Field label="Model name" hint="e.g. llama3.2:3b, qwen2.5:7b, gpt-4o-mini, claude-3-5-sonnet-latest">
+          <Field label="Model name" hint="e.g. llama3.2:3b, gpt-4o-mini, claude-3-5-sonnet-latest, ag/gemini-3.8-flash-high (Antigravity)">
             <Input value={modelName} onChange={(e) => setModelName(e.target.value)} className="h-9" />
           </Field>
         </div>
@@ -103,6 +121,7 @@ function AISettingsCard() {
               save.mutate({
                 provider,
                 model_name: modelName,
+                fast_model_name: fastModelName,
                 base_url: baseUrl === "" ? null : baseUrl,
                 ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}),
               })
@@ -142,6 +161,118 @@ function AISettingsCard() {
           </div>
         )}
       </div>
+    </Card>
+  )
+}
+
+function PromptsCard() {
+  const prompts = usePrompts(true)
+  const save = useSavePrompts()
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [open, setOpen] = useState<string | null>(null)
+
+  const label = (key: string) =>
+    key
+      .split("_")
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+      .join(" ")
+
+  function saveDraft(key: string) {
+    const value = drafts[key]
+    if (value === undefined) return
+    save.mutate({ [key]: value === "" ? null : value })
+  }
+
+  return (
+    <Card title="System prompts" icon={ScrollText}>
+      <p className="text-xs text-muted-foreground">
+        Override how each agent thinks. Empty means the built-in default is used.
+      </p>
+      <div className="mt-3 space-y-1.5">
+        {(prompts.data?.prompts ?? []).map((p) => {
+          const draft = drafts[p.key]
+          const edited = draft !== undefined
+          return (
+            <div key={p.key} className="rounded-lg border border-[var(--glass-border)]">
+              <button
+                type="button"
+                onClick={() => setOpen(open === p.key ? null : p.key)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+              >
+                <span className="font-medium">{label(p.key)}</span>
+                {p.override && (
+                  <Badge variant="outline" className="text-[10px] text-primary">
+                    custom
+                  </Badge>
+                )}
+                <span className="ml-auto text-[11px] text-muted-foreground">{open === p.key ? "close" : "edit"}</span>
+              </button>
+              {open === p.key && (
+                <div className="space-y-2 px-3 pb-3">
+                  <textarea
+                    value={edited ? draft : (p.override ?? p.default)}
+                    onChange={(e) => setDrafts({ ...drafts, [p.key]: e.target.value })}
+                    rows={5}
+                    className="w-full rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg)] px-2 py-1.5 text-xs leading-relaxed outline-none focus:border-primary/50"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="xs" disabled={!edited || save.isPending} onClick={() => saveDraft(p.key)}>
+                      <Save /> Save
+                    </Button>
+                    {p.override && (
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        disabled={save.isPending}
+                        onClick={() => {
+                          setDrafts({ ...drafts, [p.key]: "" })
+                          save.mutate({ [p.key]: null })
+                        }}
+                      >
+                        <RotateCcw /> Reset
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
+function UsageCard() {
+  const usage = useAIUsage(7, true)
+  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n))
+
+  return (
+    <Card title="AI usage (7 days)" icon={Coins}>
+      {usage.isPending ? (
+        <p className="text-sm text-muted-foreground">…</p>
+      ) : (usage.data?.calls ?? 0) === 0 ? (
+        <p className="text-sm text-muted-foreground">No AI calls yet — run a review or ask your second brain.</p>
+      ) : (
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{usage.data!.calls} calls</Badge>
+            <Badge variant="outline">{fmt(usage.data!.input_tokens)} in</Badge>
+            <Badge variant="outline">{fmt(usage.data!.output_tokens)} out</Badge>
+          </div>
+          <ul className="space-y-1 text-xs text-muted-foreground">
+            {usage.data!.by_agent.map((a) => (
+              <li key={a.agent} className="flex items-center gap-2">
+                <span className="w-24 capitalize">{a.agent}</span>
+                <span>{a.calls} calls</span>
+                <span className="ml-auto">
+                  {fmt(a.input_tokens)} in · {fmt(a.output_tokens)} out
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   )
 }
@@ -227,7 +358,11 @@ export function SettingsView() {
       <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
       <div className="mt-4 grid gap-4">
         <AISettingsCard />
-        <PrefsCard />
+        <div className="grid gap-4 md:grid-cols-2">
+          <UsageCard />
+          <PrefsCard />
+        </div>
+        <PromptsCard />
         <div className="grid gap-4 md:grid-cols-2">
           <AppearanceCard />
           <SearchCard />

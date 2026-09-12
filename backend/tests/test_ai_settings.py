@@ -52,9 +52,10 @@ def test_factory_builds_correct_model_per_provider():
     openai_compatible = create_agent_model(
         AISettings(ai_provider="openai_compatible", ai_model_name="llama3.2:3b")
     )
-    assert type(openai_compatible).__name__ == "OpenAIChatModel"
+    assert isinstance(openai_compatible.wrapped, OpenAIChatModel)
+    assert type(openai_compatible.wrapped).__name__ == "OpenAIChatModel"
 
     anthropic = create_agent_model(
         AISettings(ai_provider="anthropic", ai_model_name="claude-3-5-haiku-latest", ai_api_key="k")
     )
-    assert isinstance(anthropic, AnthropicModel)
+    assert isinstance(anthropic.wrapped, AnthropicModel)

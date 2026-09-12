@@ -9,7 +9,9 @@ export interface SlashItem {
   command: (editor: Editor, range: Range) => void
 }
 
-function items(onActivity: (editor: Editor) => void): SlashItem[] {
+export type AssistAction = "improve" | "continue" | "summarize"
+
+function items(onActivity: (editor: Editor) => void, onAI: (editor: Editor, action: AssistAction) => void): SlashItem[] {
   return [
     {
       label: "Heading 1",
@@ -57,6 +59,33 @@ function items(onActivity: (editor: Editor) => void): SlashItem[] {
       hint: "Tasks done, focus time, habits",
       keywords: "embed rollup stats",
       command: (editor) => onActivity(editor),
+    },
+    {
+      label: "AI: Improve entry",
+      hint: "Rewrite clearer, keep your voice",
+      keywords: "ai rewrite polish",
+      command: (editor, range) => {
+        editor.chain().focus().deleteRange(range).run()
+        onAI(editor, "improve")
+      },
+    },
+    {
+      label: "AI: Continue writing",
+      hint: "Pick up where you stopped",
+      keywords: "ai continue",
+      command: (editor, range) => {
+        editor.chain().focus().deleteRange(range).run()
+        onAI(editor, "continue")
+      },
+    },
+    {
+      label: "AI: Summarize entry",
+      hint: "Short summary of the whole entry",
+      keywords: "ai tldr summary",
+      command: (editor, range) => {
+        editor.chain().focus().deleteRange(range).run()
+        onAI(editor, "summarize")
+      },
     },
   ]
 }
@@ -162,15 +191,19 @@ class SlashPopup {
   }
 }
 
-export const SlashCommands = Extension.create<{ onActivity: (editor: Editor) => void }>({
+export const SlashCommands = Extension.create<{
+  onActivity: (editor: Editor) => void
+  onAI: (editor: Editor, action: AssistAction) => void
+}>({
   name: "slashCommands",
 
   addOptions() {
-    return { onActivity: () => {} }
+    return { onActivity: () => {}, onAI: () => {} }
   },
 
   addProseMirrorPlugins() {
     const onActivity = this.options.onActivity
+    const onAI = this.options.onAI
     return [
       Suggestion<SlashItem>({
         editor: this.editor,
@@ -178,7 +211,7 @@ export const SlashCommands = Extension.create<{ onActivity: (editor: Editor) => 
         char: "/",
         startOfLine: false,
         items: ({ query }) =>
-          items(onActivity).filter((item) =>
+          items(onActivity, onAI).filter((item) =>
             (item.label + " " + (item.keywords ?? "")).toLowerCase().includes(query.toLowerCase()),
           ),
         command: ({ editor, range, props }) => props.command(editor, range),
