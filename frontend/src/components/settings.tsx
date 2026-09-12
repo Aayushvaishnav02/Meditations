@@ -142,7 +142,7 @@ function AISettingsCard() {
           <div
             className={cn(
               "flex items-start gap-2 rounded-lg border px-3 py-2 text-xs",
-              test.data.ok ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-red-500/30 bg-red-500/10 text-red-300",
+              test.data.ok ? "border-positive/30 bg-positive/10 text-positive" : "border-destructive/30 bg-destructive/10 text-destructive",
             )}
           >
             {test.data.ok ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" /> : <XCircle className="mt-0.5 size-3.5 shrink-0" />}
@@ -355,7 +355,7 @@ export function SettingsView() {
   return (
     <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div className="mx-auto flex w-full max-w-3xl flex-col px-6 pt-5 pb-10">
-      <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
+      <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
       <div className="mt-4 grid gap-4">
         <AISettingsCard />
         <div className="grid gap-4 md:grid-cols-2">

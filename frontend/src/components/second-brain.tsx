@@ -177,7 +177,7 @@ export function SecondBrain() {
     <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 pt-5">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold tracking-tight">Second brain</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Second brain</h1>
           <div className="flex items-center rounded-full border border-border/60 p-0.5 text-xs">
             <button
               type="button"
@@ -253,7 +253,7 @@ export function SecondBrain() {
                 Search across your journals, weekly rollups and monthly reviews.
               </p>
             ) : results.isError ? (
-              <p className="pt-16 text-center text-sm text-red-400">Search failed — is the backend running?</p>
+              <p className="pt-16 text-center text-sm text-destructive">Search failed — is the backend running?</p>
             ) : results.isPending ? (
               <p className="pt-16 text-center text-sm text-muted-foreground">Searching…</p>
             ) : (results.data ?? []).length === 0 ? (

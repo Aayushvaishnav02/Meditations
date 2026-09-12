@@ -27,9 +27,9 @@ function localDayParam(d: Date): string {
 }
 
 const PRIORITY_DOT: Record<number, string> = {
-  3: "bg-red-400",
-  2: "bg-amber-400",
-  1: "bg-sky-400",
+  3: "bg-high",
+  2: "bg-medium",
+  1: "bg-low",
   0: "bg-muted-foreground/40",
 }
 
@@ -61,7 +61,7 @@ function TaskChip({ task }: { task: Task }) {
       {task.estimated_minutes !== null && (
         <span className="shrink-0 text-[10px] text-muted-foreground">{formatDuration(task.estimated_minutes)}</span>
       )}
-      {overdue && <span className="size-1.5 shrink-0 rounded-full bg-red-400" />}
+      {overdue && <span className="size-1.5 shrink-0 rounded-full bg-overdue" />}
     </button>
   )
 }

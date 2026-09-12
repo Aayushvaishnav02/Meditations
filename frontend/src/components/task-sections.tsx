@@ -1,10 +1,12 @@
 import { useMemo } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { Inbox, PartyPopper } from "lucide-react"
+import { Inbox, PartyPopper, SearchX } from "lucide-react"
 import type { Task, TaskList } from "@/api/types"
 import { GROUP_LABELS, groupOf, sortTasks, type TaskGroup } from "@/lib/dates"
-import type { SmartView } from "@/stores/ui"
+import { useUi, type SmartView } from "@/stores/ui"
+import { Button } from "@/components/ui/button"
 import { TaskItem } from "@/components/task-item"
+import { matchTaskSearch } from "@/lib/search"
 
 const SECTIONS_BY_SCOPE: Record<SmartView | "list", TaskGroup[]> = {
   today: ["overdue", "today"],
@@ -24,12 +26,6 @@ const EMPTY_MESSAGES: Record<string, string> = {
   list: "This list is empty.",
 }
 
-function matchSearch(task: Task, search: string): boolean {
-  if (!search) return true
-  const q = search.toLowerCase()
-  return task.title.toLowerCase().includes(q) || task.tags.some((t) => t.toLowerCase().includes(q))
-}
-
 export function TaskSections({
   tasks,
   scope,
@@ -44,7 +40,7 @@ export function TaskSections({
   const { sections, hasAny } = useMemo(() => {
     const scopeFilter = (t: Task) =>
       scope.kind === "list" ? t.list_id === scope.id : true
-    const visible = tasks.filter((t) => scopeFilter(t) && matchSearch(t, search))
+    const visible = tasks.filter((t) => scopeFilter(t) && matchTaskSearch(t, search))
     const byId = new Map(visible.map((t) => [t.id, t]))
 
     const grouped = new Map<TaskGroup, Task[]>()
@@ -71,7 +67,21 @@ export function TaskSections({
     return { sections, hasAny }
   }, [tasks, scope, search])
 
-  if (!hasAny && !search) {
+  if (!hasAny) {
+    if (search) {
+      return (
+        <div className="flex flex-col items-center gap-3 pt-24 text-center text-muted-foreground">
+          <SearchX className="size-8 text-muted-foreground/50" />
+          <p className="text-sm">
+            No tasks match <span className="font-medium text-foreground">“{search}”</span>
+          </p>
+          <p className="text-xs">Search matches task titles and tags.</p>
+          <Button variant="outline" size="sm" onClick={() => useUi.getState().setSearch("")}>
+            Clear filter
+          </Button>
+        </div>
+      )
+    }
     return (
       <div className="flex flex-col items-center gap-3 pt-24 text-center text-muted-foreground">
         {scope.kind === "smart" && scope.id === "today" ? (

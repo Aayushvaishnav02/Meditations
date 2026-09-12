@@ -6,12 +6,12 @@ import { cn } from "cn"
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-/** mood 1..5 -> red..amber..green; no mood -> primary */
+/** mood 1..5 -> red..amber..green; no mood -> primary (theme-aware tokens) */
 function moodClass(mood: number | null): string {
   if (mood === null) return "bg-primary"
-  if (mood <= 2) return "bg-red-400"
-  if (mood === 3) return "bg-amber-400"
-  return "bg-emerald-400"
+  if (mood <= 2) return "bg-overdue"
+  if (mood === 3) return "bg-medium"
+  return "bg-positive"
 }
 
 function localDayParam(d: Date): string {

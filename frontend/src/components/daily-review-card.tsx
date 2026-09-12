@@ -79,7 +79,7 @@ export function DailyReviewCard({ day }: { day: string }) {
           sends today's entry to your AI provider; adjusts the score by at most ±10
         </span>
       </div>
-      {rollup.error && <p className="mt-2 text-xs text-red-400">AI review failed: {rollup.error}</p>}
+      {rollup.error && <p className="mt-2 text-xs text-destructive">AI review failed: {rollup.error}</p>}
     </div>
   )
 }
