@@ -320,3 +320,22 @@ def test_run_daily_reports_usage(monkeypatch):
         )
     )
     assert len(reports) == 1 and reports[0].agent == "daily"
+
+
+def test_stream_assist_reports_usage():
+    """Assist must stream as plain TEXT (structured output_type breaks stream_text)."""
+    from pydantic_ai.models.test import TestModel
+
+    reports = []
+
+    async def on_usage(report):
+        reports.append(report)
+
+    async def consume():
+        async for _ in agents.stream_assist(
+            agents.AssistDeps(action="improve", text="some draft"), model=TestModel(), on_usage=on_usage
+        ):
+            pass
+
+    asyncio.run(consume())
+    assert len(reports) == 1 and reports[0].agent == "assist"

@@ -381,10 +381,11 @@ def render_assist_prompt(deps: AssistDeps) -> str:
 async def stream_assist(
     deps: AssistDeps, model=None, system_prompt: str | None = None, on_usage: OnUsage | None = None
 ) -> AsyncIterator[str]:
-    """Yield cumulative markdown for an editor assist action."""
+    """Yield cumulative markdown for an editor assist action. Plain text output:
+    stream_text() cannot be mixed with a structured output_type."""
     if deps.action not in ASSIST_SYSTEMS:
         raise ValueError(f"unknown assist action: {deps.action}")
-    agent = _build_agent(AssistOutput, system_prompt or ASSIST_SYSTEMS[deps.action], model, fast=True)
+    agent = _build_agent(str, system_prompt or ASSIST_SYSTEMS[deps.action], model, fast=True)
     started = time.monotonic()
     async with agent.run_stream(render_assist_prompt(deps)) as result:
         async for text in result.stream_text(debounce_by=0.1):
