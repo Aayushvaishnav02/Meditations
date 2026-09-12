@@ -330,10 +330,10 @@ export function JournalView() {
           {save.isPending ? (
             "Saving…"
           ) : save.isError ? (
-            <span className="text-red-400">Save failed</span>
+            <span className="text-destructive">Save failed</span>
           ) : save.data?.saved === true ? (
             <span className="flex items-center gap-1">
-              <Check className="size-3 text-emerald-400" /> Saved
+              <Check className="size-3 text-positive" /> Saved
             </span>
           ) : null}
         </div>
@@ -396,7 +396,7 @@ export function JournalView() {
             <h3 className="text-sm font-semibold capitalize">AI {assistView}</h3>
             {assist.pending && <Sparkles className="size-3 animate-pulse text-primary" />}
             {!assist.pending && assist.error && (
-              <span className="text-xs text-red-400">{assist.error}</span>
+              <span className="text-xs text-destructive">{assist.error}</span>
             )}
             <div className="ml-auto flex items-center gap-2">
               <Button variant="outline" size="xs" disabled={assist.pending} onClick={discardAssist}>

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import {
   DndContext,
   DragOverlay,
+  KeyboardSensor,
   PointerSensor,
   useDroppable,
   useSensor,
@@ -9,11 +10,16 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core"
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { sortableKeyboardCoordinates, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Checkbox } from "@/components/ui/checkbox"
+import { TaskCheckbox } from "@/components/task-item"
+import { PriorityBadge } from "@/components/priority-badge"
 import { Badge } from "@/components/ui/badge"
-import type { Priority, Task, TaskStatus } from "@/api/types"
+import { Button } from "@/components/ui/button"
+import { SearchX } from "lucide-react"
+import { matchTaskSearch } from "@/lib/search"
+import { useUi } from "@/stores/ui"
+import type { Task, TaskStatus } from "@/api/types"
 import { formatDue, parseUTC } from "@/lib/dates"
 import { useUpdateTask } from "@/hooks/api"
 import { cn } from "cn"
@@ -24,12 +30,7 @@ const COLUMNS: { status: TaskStatus; label: string }[] = [
   { status: "completed", label: "Done" },
 ]
 
-const PRIORITY_CLASS: Record<Priority, string> = {
-  3: "text-red-400",
-  2: "text-amber-400",
-  1: "text-sky-400",
-  0: "text-muted-foreground/0",
-}
+const DONE_CAP = 30
 
 function byOrder(a: Task, b: Task): number {
   if (a.order_index !== b.order_index) return a.order_index - b.order_index
@@ -37,7 +38,6 @@ function byOrder(a: Task, b: Task): number {
 }
 
 function TaskCard({ task, dragging = false }: { task: Task; dragging?: boolean }) {
-  const updateTask = useUpdateTask()
   const done = task.status === "completed"
   const due = parseUTC(task.due_date)
   const overdue = !done && due !== null && due.getTime() < Date.now()
@@ -51,28 +51,19 @@ function TaskCard({ task, dragging = false }: { task: Task; dragging?: boolean }
     >
       <div className="flex items-start gap-2">
         <span className="mt-0.5" onClick={(e) => e.stopPropagation()}>
-          <Checkbox
-            checked={done}
-            onCheckedChange={(checked) =>
-              updateTask.mutate({ id: task.id, patch: { status: checked ? "completed" : "todo" } })
-            }
-          />
+          <TaskCheckbox task={task} />
         </span>
         <div className="min-w-0">
           <p className={cn("leading-snug", done && "line-through opacity-70")}>{task.title}</p>
           <div className="mt-1 flex flex-wrap gap-1">
-            {task.priority !== 0 && (
-              <Badge variant="outline" className={cn("px-1", PRIORITY_CLASS[task.priority])}>
-                P{task.priority}
-              </Badge>
-            )}
+            <PriorityBadge priority={task.priority} showIcon={false} />
             {due && (
-              <Badge variant="outline" className={cn("px-1", overdue ? "text-red-400" : "text-muted-foreground")}>
+              <Badge variant="outline" className={cn("gap-1", overdue ? "text-overdue" : "text-muted-foreground")}>
                 {formatDue(due)}
               </Badge>
             )}
             {task.tags.map((t) => (
-              <Badge key={t} variant="outline" className="px-1 text-muted-foreground">
+              <Badge key={t} variant="outline" className="text-muted-foreground">
                 @{t}
               </Badge>
             ))}
@@ -101,46 +92,70 @@ function SortableCard({ task }: { task: Task }) {
   )
 }
 
-function Column({ status, label, tasks }: { status: TaskStatus; label: string; tasks: Task[] }) {
+function Column({ status, label, tasks, overflow }: { status: TaskStatus; label: string; tasks: Task[]; overflow: number }) {
   const { setNodeRef, isOver } = useDroppable({ id: `col-${status}`, data: { type: "column", status } })
   return (
     <div className="flex min-h-0 w-72 shrink-0 flex-col">
       <h2 className="mb-2 flex items-center gap-2 px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
         {label}
-        <span className="font-normal opacity-60">{tasks.length}</span>
+        <span className="font-normal opacity-60">{tasks.length + overflow}</span>
       </h2>
       <div
         ref={setNodeRef}
         className={cn(
-          "flex-1 space-y-2 overflow-y-auto rounded-2xl border-[var(--glass-border)] bg-[var(--glass-hover)] p-2 transition-colors",
-          isOver && "border-primary/40 bg-primary/[0.04]",
+          "flex flex-1 flex-col gap-2 overflow-y-auto rounded-2xl border border-transparent bg-[var(--glass-hover)] p-2 transition-colors",
+          isOver && "border-primary/40 bg-primary/[0.06]",
         )}
       >
-        <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          {tasks.map((t) => (
-            <SortableCard key={t.id} task={t} />
-          ))}
-        </SortableContext>
+        {tasks.length === 0 ? (
+          <div
+            className={cn(
+              "flex flex-1 items-center justify-center rounded-xl border border-dashed text-xs text-muted-foreground/70 transition-colors",
+              isOver ? "border-primary/50 text-foreground" : "border-[var(--glass-border)]",
+            )}
+          >
+            {isOver ? "Release to drop" : "Drop tasks here"}
+          </div>
+        ) : (
+          <>
+            <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+              {tasks.map((t) => (
+                <SortableCard key={t.id} task={t} />
+              ))}
+            </SortableContext>
+            {overflow > 0 && (
+              <p className="px-1 pt-1 text-[11px] text-muted-foreground">
+                +{overflow} older {status === "completed" ? "completed" : ""} not shown
+              </p>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
 }
 
-export function KanbanBoard({ tasks }: { tasks: Task[] }) {
+export function KanbanBoard({ tasks, search = "" }: { tasks: Task[]; search?: string }) {
   const updateTask = useUpdateTask()
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
   const [activeTask, setActiveTask] = useState<Task | null>(null)
 
+  const visible = useMemo(() => tasks.filter((t) => matchTaskSearch(t, search)), [tasks, search])
+
   const columns = useMemo(() => {
-    const topLevel = tasks.filter((t) => t.parent_id === null)
-    return COLUMNS.map((c) => ({
-      ...c,
-      tasks: topLevel
-        .filter((t) => t.status === c.status)
-        .sort(byOrder)
-        .slice(0, c.status === "completed" ? 30 : undefined),
-    }))
-  }, [tasks])
+    const topLevel = visible.filter((t) => t.parent_id === null)
+    return COLUMNS.map((c) => {
+      const all = topLevel.filter((t) => t.status === c.status).sort(byOrder)
+      return {
+        ...c,
+        tasks: c.status === "completed" ? all.slice(0, DONE_CAP) : all,
+        overflow: c.status === "completed" ? Math.max(0, all.length - DONE_CAP) : 0,
+      }
+    })
+  }, [visible])
 
   function onDragStart(event: DragStartEvent) {
     setActiveTask(tasks.find((t) => t.id === event.active.id) ?? null)
@@ -157,7 +172,8 @@ export function KanbanBoard({ tasks }: { tasks: Task[] }) {
     const targetStatus = overData?.type === "column" ? overData.status : tasks.find((t) => t.id === over.id)?.status
     if (!targetStatus) return
 
-    const columnTasks = tasks
+    // mirror what the user sees: order among the filtered, top-level cards in the target column
+    const columnTasks = visible
       .filter((t) => t.status === targetStatus && t.parent_id === null && t.id !== activeTask.id)
       .sort(byOrder)
 
@@ -175,11 +191,23 @@ export function KanbanBoard({ tasks }: { tasks: Task[] }) {
 
   return (
     <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveTask(null)}>
-      <div className="flex h-full gap-4 overflow-x-auto px-6 pb-6">
-        {columns.map((c) => (
-          <Column key={c.status} status={c.status} label={c.label} tasks={c.tasks} />
-        ))}
-      </div>
+      {search && visible.filter((t) => t.parent_id === null).length === 0 ? (
+        <div className="flex flex-col items-center gap-2 pt-16 text-center text-muted-foreground">
+          <SearchX className="size-7 text-muted-foreground/50" />
+          <p className="text-sm">
+            No board tasks match <span className="font-medium text-foreground">“{search}”</span>
+          </p>
+          <Button variant="outline" size="sm" onClick={() => useUi.getState().setSearch("")}>
+            Clear filter
+          </Button>
+        </div>
+      ) : (
+        <div className="flex h-full gap-4 overflow-x-auto px-6 pb-6">
+          {columns.map((c) => (
+            <Column key={c.status} status={c.status} label={c.label} tasks={c.tasks} overflow={c.overflow} />
+          ))}
+        </div>
+      )}
       <DragOverlay>{activeTask ? <TaskCard task={activeTask} dragging /> : null}</DragOverlay>
     </DndContext>
   )

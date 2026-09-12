@@ -4,11 +4,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useCapture } from "@/hooks/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 import { useCreateList, useCreateTask, useLists } from "@/hooks/api"
 import { parseQuickAdd } from "@/lib/parsing"
 import { formatDue, parseUTC } from "@/lib/dates"
+import { useUi } from "@/stores/ui"
 import { cn } from "cn"
 
 const PRIORITY_LABELS: Record<number, string> = { 3: "High", 2: "Medium", 1: "Low", 0: "No priority" }
@@ -68,12 +70,11 @@ function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
         <p className="text-xs text-muted-foreground">
           Paste or dictate anything — the AI extracts tasks with due dates and adds a snippet to today's journal.
         </p>
-        <textarea
+        <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={5}
           placeholder="e.g. Spoke with Alex. Need to email him the slide deck by Thursday 4pm and schedule team sync for Monday."
-          className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg)] p-3 text-sm outline-none focus:border-primary/50"
         />
         <div className="flex items-center gap-2">
           <Button
@@ -104,7 +105,8 @@ function CaptureDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 
 export function QuickAdd() {
   const [value, setValue] = useState("")
-  const [captureOpen, setCaptureOpen] = useState(false)
+  const captureOpen = useUi((s) => s.captureOpen)
+  const setCaptureOpen = useUi((s) => s.setCaptureOpen)
   const lists = useLists()
   const createTask = useCreateTask()
   const createList = useCreateList()
@@ -161,6 +163,7 @@ export function QuickAdd() {
       >
         <Sparkles className="size-4 shrink-0 text-primary" />
         <Input
+          id="quick-add-input"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {

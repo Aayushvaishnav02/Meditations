@@ -16,6 +16,11 @@
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar: var(--sidebar);
+    --color-high: var(--high);
+    --color-medium: var(--medium);
+    --color-low: var(--low);
+    --color-positive: var(--positive);
+    --color-overdue: var(--overdue);
     --color-chart-5: var(--chart-5);
     --color-chart-4: var(--chart-4);
     --color-chart-3: var(--chart-3);
@@ -176,6 +181,34 @@
   border: 1px solid var(--glass-border);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+
+/* --- status colors: 400-level in dark, 600/700-level in light (WCAG 4.5:1 on both) --- */
+:root {
+  --high: oklch(0.505 0.213 27.518);
+  --medium: oklch(0.555 0.163 48.998);
+  --low: oklch(0.5 0.134 242.749);
+  --positive: oklch(0.508 0.118 165.612);
+  --overdue: oklch(0.505 0.213 27.518);
+}
+.dark {
+  --high: oklch(0.704 0.191 22.216);
+  --medium: oklch(0.828 0.189 84.429);
+  --low: oklch(0.746 0.16 232.661);
+  --positive: oklch(0.765 0.177 163.223);
+  --overdue: oklch(0.704 0.191 22.216);
+}
+
+/* respect reduced-motion preferences (CSS animations & transitions) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {

@@ -75,7 +75,7 @@ export function BriefingCard() {
             </span>
           </div>
         )}
-        {briefing.error && <p className="mt-2 text-xs text-red-400">Briefing failed: {briefing.error}</p>}
+        {briefing.error && <p className="mt-2 text-xs text-destructive">Briefing failed: {briefing.error}</p>}
       </div>
     </div>
   )

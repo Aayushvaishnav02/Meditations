@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Activity, Brain, CalendarRange, Flame, ListChecks, TrendingDown, TrendingUp, Timer, Minus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { BarsChart, LineChart, type Point } from "@/components/charts"
+import { InsightsSkeleton } from "@/components/skeletons"
 import { useInsights } from "@/hooks/api"
 import { formatDuration } from "@/lib/dates"
 import { cn } from "cn"
@@ -20,7 +21,7 @@ function TrendBadge({ value, prev }: { value: number; prev: number | null }) {
   }
   const up = delta > 0
   return (
-    <Badge variant="outline" className={cn("gap-1", up ? "text-emerald-400" : "text-red-400")}>
+    <Badge variant="outline" className={cn("gap-1", up ? "text-positive" : "text-overdue")}>
       {up ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
       {up ? "+" : ""}
       {delta.toFixed(1)} vs prev week
@@ -42,8 +43,8 @@ function StatCard({ label, value, sub, icon: Icon }: { label: string; value: str
 }
 
 function TrendArrow({ trend }: { trend: string }) {
-  if (trend === "rising") return <TrendingUp className="size-3.5 text-emerald-400" />
-  if (trend === "declining") return <TrendingDown className="size-3.5 text-red-400" />
+  if (trend === "rising") return <TrendingUp className="size-3.5 text-positive" />
+  if (trend === "declining") return <TrendingDown className="size-3.5 text-overdue" />
   return <Minus className="size-3.5 text-muted-foreground" />
 }
 
@@ -53,8 +54,23 @@ export function InsightsView() {
 
   if (data.isError) {
     return (
-      <main className="mx-auto w-full max-w-4xl px-6 pt-5">
-        <p className="pt-16 text-center text-sm text-red-400">Couldn't load insights — is the backend running?</p>
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="mx-auto w-full max-w-4xl px-6 pt-5">
+          <p className="pt-16 text-center text-sm text-destructive">Couldn't load insights — is the backend running?</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (data.isLoading) {
+    return (
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        <div className="mx-auto w-full max-w-4xl px-6 pt-5 pb-10">
+          <h1 className="text-xl font-semibold tracking-tight">Insights</h1>
+          <div className="mt-4">
+            <InsightsSkeleton />
+          </div>
+        </div>
       </main>
     )
   }
@@ -81,7 +97,7 @@ export function InsightsView() {
     <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 pt-5 pb-10">
       <div className="flex items-center gap-3">
-        <h1 className="text-lg font-semibold tracking-tight">Insights</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Insights</h1>
         <div className="glass ml-auto flex items-center gap-0.5 rounded-lg p-0.5">
           {PERIODS.map((p) => (
             <button
@@ -155,7 +171,7 @@ export function InsightsView() {
         <div className="glass rounded-2xl p-4">
           <h2 className="text-sm font-semibold">Mood</h2>
           <div className="mt-2">
-            <LineChart points={moodPoints} color="oklch(0.75 0.15 160)" showGrid={false} />
+              <LineChart points={moodPoints} color="var(--positive)" showGrid={false} />
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">from journal entries (1–5)</p>
         </div>
@@ -171,7 +187,7 @@ export function InsightsView() {
             <div className="mt-3 space-y-2.5">
               {(data.data?.habits ?? []).map((h) => (
                 <div key={h.id} className="flex items-center gap-2 text-sm">
-                  <Flame className={cn("size-3.5", h.current_streak > 0 ? "text-amber-400" : "text-muted-foreground/40")} />
+                  <Flame className={cn("size-3.5", h.current_streak > 0 ? "text-medium" : "text-muted-foreground/40")} />
                   <span className="truncate">{h.name}</span>
                   <span className="ml-auto text-xs text-muted-foreground">{h.current_streak}d streak</span>
                   <Badge variant="outline" className="text-[10px] text-muted-foreground">

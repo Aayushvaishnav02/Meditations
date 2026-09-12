@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { CalendarDays, ChevronDown, ChevronRight, Flag, MoreHorizontal, Plus, Repeat2, Sparkles, Timer } from "lucide-react"
+import { CalendarDays, ChevronDown, ChevronRight, MoreHorizontal, Pencil, Plus, Repeat2, Sparkles, Timer } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PriorityBadge } from "@/components/priority-badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,15 +19,8 @@ import {
 import { useCreateTask, useDecomposeTask, useDeleteTask, useUpdateTask } from "@/hooks/api"
 import { useFocusTimer } from "@/stores/timer"
 import { formatDue, formatDuration, parseUTC, toISO, startOfDay } from "@/lib/dates"
-import type { Priority, Task } from "@/api/types"
+import type { Task } from "@/api/types"
 import { cn } from "cn"
-
-const PRIORITY_META: Record<Priority, { label: string; className: string } | null> = {
-  3: { label: "High", className: "text-red-400 fill-red-400/20" },
-  2: { label: "Medium", className: "text-amber-400 fill-amber-400/20" },
-  1: { label: "Low", className: "text-sky-400 fill-sky-400/20" },
-  0: null,
-}
 
 export function TaskCheckbox({ task }: { task: Task }) {
   const updateTask = useUpdateTask()
@@ -47,7 +41,7 @@ function DueChip({ task }: { task: Task }) {
   if (!due) return null
   const overdue = task.status !== "completed" && due.getTime() < Date.now()
   return (
-    <Badge variant="outline" className={cn("gap-1", overdue ? "text-red-400" : "text-muted-foreground")}>
+    <Badge variant="outline" className={cn("gap-1", overdue ? "text-overdue" : "text-muted-foreground")}>
       <CalendarDays className="size-3" />
       {formatDue(due)}
     </Badge>
@@ -70,7 +64,7 @@ function TitleWithStrike({ task }: { task: Task }) {
   )
 }
 
-function TaskMenu({ task, lists }: { task: Task; lists: { id: string; name: string }[] }) {
+function TaskMenu({ task, lists, onRename }: { task: Task; lists: { id: string; name: string }[]; onRename: () => void }) {
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
   const decompose = useDecomposeTask()
@@ -93,8 +87,8 @@ function TaskMenu({ task, lists }: { task: Task; lists: { id: string; name: stri
           <Button
             variant="ghost"
             size="icon-xs"
-            aria-label="Task options"
-            className="opacity-0 group-hover:opacity-100 data-open:opacity-100"
+            aria-label={`Options for "${task.title}"`}
+            className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 data-open:opacity-100"
           />
         }
       >
@@ -118,12 +112,15 @@ function TaskMenu({ task, lists }: { task: Task; lists: { id: string; name: stri
           <Sparkles className="size-4" />
           {decompose.isPending ? "Breaking down…" : "Break down with AI"}
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={onRename}>
+          <Pencil className="size-4" /> Rename
+        </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Priority</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            {([3, 2, 1, 0] as Priority[]).map((p) => (
+            {([3, 2, 1, 0] as const).map((p) => (
               <DropdownMenuItem key={p} onClick={() => updateTask.mutate({ id: task.id, patch: { priority: p } })}>
-                {PRIORITY_META[p]?.label ?? "None"}
+                {p === 3 ? "High" : p === 2 ? "Medium" : p === 1 ? "Low" : "None"}
               </DropdownMenuItem>
             ))}
           </DropdownMenuSubContent>
@@ -214,7 +211,6 @@ export function TaskItem({
   const updateTask = useUpdateTask()
 
   const done = task.status === "completed"
-  const prio = PRIORITY_META[task.priority]
   const listName = lists.find((l) => l.id === task.list_id)?.name
 
   return (
@@ -260,6 +256,7 @@ export function TaskItem({
                   setRenaming(false)
                 }
               }}
+              aria-label="Task title"
               className="h-7"
             />
           ) : (
@@ -268,6 +265,7 @@ export function TaskItem({
                 setDraft(task.title)
                 setRenaming(true)
               }}
+              title="Double-click to rename"
               className="block w-full cursor-text text-left text-sm"
             >
               <TitleWithStrike task={task} />
@@ -276,12 +274,7 @@ export function TaskItem({
 
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {!done && <DueChip task={task} />}
-            {prio && (
-              <Badge variant="outline" className={cn("gap-1", prio.className)}>
-                <Flag className="size-3" />
-                {prio.label}
-              </Badge>
-            )}
+            {task.priority !== 0 && <PriorityBadge priority={task.priority} />}
             {task.estimated_minutes !== null && (
               <Badge variant="outline" className="gap-1 text-muted-foreground">
                 <Timer className="size-3" />
@@ -308,7 +301,14 @@ export function TaskItem({
         </div>
 
         <div className="flex items-center gap-1 pt-0.5">
-          <TaskMenu task={task} lists={lists} />
+          <TaskMenu
+            task={task}
+            lists={lists}
+            onRename={() => {
+              setDraft(task.title)
+              setRenaming(true)
+            }}
+          />
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { groupOf } from "@/lib/dates"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "cn"
 
@@ -99,7 +100,8 @@ function ListRow({ id, name, color, count }: { id: string; name: string; color: 
             <Button
               variant="ghost"
               size="icon-xs"
-              className="absolute top-1/2 right-1.5 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
+              aria-label={`Delete list "${name}"`}
+              className="absolute top-1/2 right-1.5 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
               onClick={() => deleteList.mutate(id)}
             />
           }
@@ -149,8 +151,10 @@ export function Sidebar() {
         <span
           className={cn(
             "ml-auto size-2 rounded-full transition-colors",
-            health.isError ? "bg-red-500" : health.isLoading ? "bg-amber-400 animate-pulse" : "bg-emerald-400",
+            health.isError ? "bg-destructive" : health.isLoading ? "bg-medium animate-pulse" : "bg-positive",
           )}
+          role="status"
+          aria-label={health.isError ? "API unreachable" : health.isLoading ? "Connecting to API" : "API connected"}
           title={health.isError ? "API unreachable" : "API connected"}
         />
       </div>
@@ -195,15 +199,17 @@ export function Sidebar() {
           Lists
         </div>
         <div className="space-y-0.5">
-          {(lists.data ?? []).map((l) => (
-            <ListRow
-              key={l.id}
-              id={l.id}
-              name={l.name}
-              color={l.color}
-              count={counts.lists.get(l.id) ?? 0}
-            />
-          ))}
+          {lists.isLoading
+            ? Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-8 w-full" />)
+            : (lists.data ?? []).map((l) => (
+                <ListRow
+                  key={l.id}
+                  id={l.id}
+                  name={l.name}
+                  color={l.color}
+                  count={counts.lists.get(l.id) ?? 0}
+                />
+              ))}
         </div>
         <div className="pt-1">
           <NewListButton />
