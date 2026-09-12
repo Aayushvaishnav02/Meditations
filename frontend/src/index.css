@@ -211,14 +211,220 @@
   }
 }
 
+/* --- named themes: official dark palettes, applied as .theme-<id> alongside .dark.
+   Status colors use each palette's accents, brightened to >= 4.5:1 on the theme bg. --- */
+.theme-tokyo-night {
+  --background: #1a1b26;
+  --foreground: #c0caf5;
+  --card: #1f2233;
+  --card-foreground: #c0caf5;
+  --popover: #1d1f2b;
+  --popover-foreground: #c0caf5;
+  --primary: #7aa2f7;
+  --primary-foreground: #1a1b26;
+  --secondary: #292e42;
+  --secondary-foreground: #c0caf5;
+  --muted: #23273a;
+  --muted-foreground: #818caf;
+  --accent: #292e42;
+  --accent-foreground: #c0caf5;
+  --destructive: #f7768e;
+  --border: #292e42;
+  --input: #2e3350;
+  --ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --sidebar: #16161e;
+  --sidebar-foreground: #c0caf5;
+  --sidebar-primary: #7aa2f7;
+  --sidebar-primary-foreground: #1a1b26;
+  --sidebar-accent: #292e42;
+  --sidebar-accent-foreground: #c0caf5;
+  --sidebar-border: #292e42;
+  --sidebar-ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --high: #f7768e;
+  --medium: #e0af68;
+  --low: #7dcfff;
+  --positive: #9ece6a;
+  --overdue: #f7768e;
+}
+
+.theme-rose-pine {
+  --background: #191724;
+  --foreground: #e0def4;
+  --card: #1f1d2e;
+  --card-foreground: #e0def4;
+  --popover: #1f1d2e;
+  --popover-foreground: #e0def4;
+  --primary: #ebbcba;
+  --primary-foreground: #191724;
+  --secondary: #26233a;
+  --secondary-foreground: #e0def4;
+  --muted: #21202e;
+  --muted-foreground: #908caa;
+  --accent: #26233a;
+  --accent-foreground: #e0def4;
+  --destructive: #eb6f92;
+  --border: #26233a;
+  --input: #2f2b44;
+  --ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --sidebar: #1c1a27;
+  --sidebar-foreground: #e0def4;
+  --sidebar-primary: #ebbcba;
+  --sidebar-primary-foreground: #191724;
+  --sidebar-accent: #26233a;
+  --sidebar-accent-foreground: #e0def4;
+  --sidebar-border: #26233a;
+  --sidebar-ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --high: #eb6f92;
+  --medium: #f6c177;
+  --low: #c4a7e7;
+  --positive: #9ccfd8;
+  --overdue: #eb6f92;
+}
+
+.theme-gruvbox {
+  --background: #282828;
+  --foreground: #ebdbb2;
+  --card: #32302f;
+  --card-foreground: #ebdbb2;
+  --popover: #32302f;
+  --popover-foreground: #ebdbb2;
+  --primary: #fabd2f;
+  --primary-foreground: #282828;
+  --secondary: #3c3836;
+  --secondary-foreground: #ebdbb2;
+  --muted: #35322e;
+  --muted-foreground: #a89984;
+  --accent: #3c3836;
+  --accent-foreground: #ebdbb2;
+  --destructive: #fb4934;
+  --border: #504945;
+  --input: #504945;
+  --ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --sidebar: #1d2021;
+  --sidebar-foreground: #ebdbb2;
+  --sidebar-primary: #fabd2f;
+  --sidebar-primary-foreground: #282828;
+  --sidebar-accent: #3c3836;
+  --sidebar-accent-foreground: #ebdbb2;
+  --sidebar-border: #504945;
+  --sidebar-ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --high: #ff5d48;
+  --medium: #fabd2f;
+  --low: #83a598;
+  --positive: #b8bb26;
+  --overdue: #ff5d48;
+}
+
+.theme-dracula {
+  --background: #282a36;
+  --foreground: #f8f8f2;
+  --card: #2d2f3e;
+  --card-foreground: #f8f8f2;
+  --popover: #2b2d3c;
+  --popover-foreground: #f8f8f2;
+  --primary: #bd93f9;
+  --primary-foreground: #282a36;
+  --secondary: #44475a;
+  --secondary-foreground: #f8f8f2;
+  --muted: #34374a;
+  --muted-foreground: #8f96b5;
+  --accent: #44475a;
+  --accent-foreground: #f8f8f2;
+  --destructive: #ff5555;
+  --border: #44475a;
+  --input: #4a4d63;
+  --ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --sidebar: #21222c;
+  --sidebar-foreground: #f8f8f2;
+  --sidebar-primary: #bd93f9;
+  --sidebar-primary-foreground: #282a36;
+  --sidebar-accent: #44475a;
+  --sidebar-accent-foreground: #f8f8f2;
+  --sidebar-border: #44475a;
+  --sidebar-ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --high: #ff6e6e;
+  --medium: #f1fa8c;
+  --low: #8be9fd;
+  --positive: #50fa7b;
+  --overdue: #ff6e6e;
+}
+
+.theme-nord {
+  --background: #2e3440;
+  --foreground: #eceff4;
+  --card: #373e4d;
+  --card-foreground: #eceff4;
+  --popover: #353c4a;
+  --popover-foreground: #eceff4;
+  --primary: #88c0d0;
+  --primary-foreground: #2e3440;
+  --secondary: #434c5e;
+  --secondary-foreground: #eceff4;
+  --muted: #3b4252;
+  --muted-foreground: #aeb8ca;
+  --accent: #434c5e;
+  --accent-foreground: #eceff4;
+  --destructive: #bf616a;
+  --border: #434c5e;
+  --input: #4c566a;
+  --ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --sidebar: #2b303b;
+  --sidebar-foreground: #eceff4;
+  --sidebar-primary: #88c0d0;
+  --sidebar-primary-foreground: #2e3440;
+  --sidebar-accent: #434c5e;
+  --sidebar-accent-foreground: #eceff4;
+  --sidebar-border: #434c5e;
+  --sidebar-ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --high: #e0989f;
+  --medium: #ebcb8b;
+  --low: #81a1c1;
+  --positive: #a3be8c;
+  --overdue: #e0989f;
+}
+
+.theme-ayu {
+  --background: #0b0e14;
+  --foreground: #bfbdb6;
+  --card: #12161f;
+  --card-foreground: #bfbdb6;
+  --popover: #10141c;
+  --popover-foreground: #bfbdb6;
+  --primary: #ff8f40;
+  --primary-foreground: #0b0e14;
+  --secondary: #1a2233;
+  --secondary-foreground: #bfbdb6;
+  --muted: #141a25;
+  --muted-foreground: #8a9199;
+  --accent: #1a2233;
+  --accent-foreground: #bfbdb6;
+  --destructive: #f07178;
+  --border: #1e2431;
+  --input: #232b3b;
+  --ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --sidebar: #0d1017;
+  --sidebar-foreground: #bfbdb6;
+  --sidebar-primary: #ff8f40;
+  --sidebar-primary-foreground: #0b0e14;
+  --sidebar-accent: #1a2233;
+  --sidebar-accent-foreground: #bfbdb6;
+  --sidebar-border: #1e2431;
+  --sidebar-ring: color-mix(in srgb, var(--primary) 55%, transparent);
+  --high: #f07178;
+  --medium: #e6b450;
+  --low: #59c2ff;
+  --positive: #7fd962;
+  --overdue: #f07178;
+}
+
 body {
   background-color: var(--color-background);
   background-image: none;
 }
 .dark body {
   background-image:
-    radial-gradient(1100px 700px at 85% -10%, oklch(0.4 0.1 295 / 0.28), transparent 70%),
-    radial-gradient(900px 600px at -10% 110%, oklch(0.35 0.09 260 / 0.2), transparent 70%);
+    radial-gradient(1100px 700px at 85% -10%, color-mix(in oklch, var(--primary) 26%, transparent), transparent 70%),
+    radial-gradient(900px 600px at -10% 110%, color-mix(in oklch, var(--primary) 18%, transparent), transparent 70%);
   background-attachment: fixed;
 }
 .light body {

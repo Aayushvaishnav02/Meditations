@@ -15,7 +15,7 @@ import { Sidebar } from "@/components/sidebar"
 import { TaskSections } from "@/components/task-sections"
 import { KanbanSkeleton, TaskListSkeleton } from "@/components/skeletons"
 import { useLists, useTasks } from "@/hooks/api"
-import { useUi } from "@/stores/ui"
+import { THEMES, useUi } from "@/stores/ui"
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 
@@ -35,8 +35,12 @@ export default function App() {
   const theme = useUi((s) => s.theme)
   useEffect(() => {
     const root = document.documentElement
-    root.classList.toggle("dark", theme === "dark")
+    const meta = THEMES.find((t) => t.id === theme)
+    root.classList.toggle("dark", meta?.dark ?? true)
     root.classList.toggle("light", theme === "light")
+    for (const t of THEMES) {
+      root.classList.toggle(`theme-${t.id}`, theme === t.id)
+    }
   }, [theme])
 
   const section = useUi((s) => s.section)

@@ -4,13 +4,12 @@ import {
   CheckCircle2,
   Coins,
   Gauge,
+  Palette,
   RefreshCw,
   RotateCcw,
   Save,
   ScrollText,
   Search,
-  Sun,
-  Moon,
   XCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -30,7 +29,7 @@ import {
   useSearchStatus,
   useTestAI,
 } from "@/hooks/api"
-import { useUi } from "@/stores/ui"
+import { THEMES, useUi, type Theme } from "@/stores/ui"
 import { cn } from "cn"
 
 function Card({ title, icon: Icon, children }: { title: string; icon: typeof Bot; children: React.ReactNode }) {
@@ -327,23 +326,44 @@ function SearchCard() {
   )
 }
 
+function ThemeSwatch({ id }: { id: Theme }) {
+  const meta = THEMES.find((t) => t.id === id)!
+  return (
+    <span
+      className={cn(
+        "flex h-5 w-8 shrink-0 overflow-hidden rounded border border-border/60",
+        meta.dark && "dark",
+        id !== "dark" && id !== "light" && `theme-${id}`,
+      )}
+      aria-hidden
+    >
+      <span className="flex-1 bg-background" />
+      <span className="flex-1 bg-card" />
+      <span className="flex-1 bg-primary" />
+    </span>
+  )
+}
+
 function AppearanceCard() {
   const theme = useUi((s) => s.theme)
   const setTheme = useUi((s) => s.setTheme)
   return (
-    <Card title="Appearance" icon={theme === "dark" ? Moon : Sun}>
-      <div className="glass flex items-center gap-0.5 rounded-lg p-0.5">
-        {(["dark", "light"] as const).map((t) => (
+    <Card title="Appearance" icon={Palette}>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {THEMES.map((t) => (
           <button
-            key={t}
-            onClick={() => setTheme(t)}
+            key={t.id}
+            onClick={() => setTheme(t.id)}
+            aria-pressed={theme === t.id}
             className={cn(
-              "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-colors",
-              theme === t ? "bg-primary/20 text-foreground" : "text-muted-foreground hover:text-foreground",
+              "flex items-center gap-2 rounded-lg border px-2.5 py-2 text-xs transition-colors",
+              theme === t.id
+                ? "border-primary/50 bg-primary/10 text-foreground"
+                : "border-[var(--glass-border)] text-muted-foreground hover:text-foreground",
             )}
           >
-            {t === "dark" ? <Moon className="size-3.5" /> : <Sun className="size-3.5" />}
-            {t === "dark" ? "Dark" : "Light"}
+            <ThemeSwatch id={t.id} />
+            <span className="truncate">{t.label}</span>
           </button>
         ))}
       </div>

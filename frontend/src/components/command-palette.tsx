@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { useLists, useTasks } from "@/hooks/api"
-import { useUi, type Section, type SmartView } from "@/stores/ui"
+import { THEMES, useUi, type Section, type SmartView } from "@/stores/ui"
 import { useFocusTimer } from "@/stores/timer"
 import { formatDue, parseUTC } from "@/lib/dates"
 import { cn } from "cn"
@@ -37,7 +37,7 @@ type Command = {
   run: () => void
 }
 
-const GROUPS = ["Navigate", "Tasks", "Views", "Lists", "Actions"] as const
+const GROUPS = ["Navigate", "Tasks", "Views", "Lists", "Theme", "Actions"] as const
 
 function score(text: string, q: string): number {
   const t = text.toLowerCase()
@@ -192,17 +192,6 @@ function PaletteBody() {
         },
       },
       {
-        id: "action-theme",
-        label: theme === "dark" ? "Switch to light theme" : "Switch to dark theme",
-        group: "Actions",
-        icon: theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />,
-        keywords: "appearance dark light mode",
-        run: () => {
-          ui.setTheme(theme === "dark" ? "light" : "dark")
-          setOpen(false)
-        },
-      },
-      {
         id: "action-search",
         label: "Search tasks",
         group: "Actions",
@@ -217,7 +206,20 @@ function PaletteBody() {
       },
     ]
 
-    return [...nav, ...taskViews, ...views, ...listCommands, ...actions]
+    const themeCommands: Command[] = THEMES.map((t) => ({
+      id: `theme-${t.id}`,
+      label: t.label,
+      group: "Theme",
+      icon: t.dark ? <Moon className="size-4" /> : <Sun className="size-4" />,
+      hint: theme === t.id ? "current" : undefined,
+      keywords: "theme appearance color scheme dark light",
+      run: () => {
+        ui.setTheme(t.id)
+        setOpen(false)
+      },
+    }))
+
+    return [...nav, ...taskViews, ...views, ...listCommands, ...themeCommands, ...actions]
   }, [lists.data, theme, setOpen])
 
   const q = query.trim().toLowerCase()

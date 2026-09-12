@@ -2,9 +2,20 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
 export type MainView = "list" | "board" | "calendar"
-export type Theme = "dark" | "light"
+export type Theme = "dark" | "light" | "tokyo-night" | "rose-pine" | "gruvbox" | "dracula" | "nord" | "ayu"
 export type SmartView = "today" | "overdue" | "upcoming" | "all" | "completed"
 export type Section = "tasks" | "journal" | "second_brain" | "insights" | "settings"
+
+export const THEMES: { id: Theme; label: string; dark: boolean }[] = [
+  { id: "dark", label: "Dark", dark: true },
+  { id: "light", label: "Light", dark: false },
+  { id: "tokyo-night", label: "Tokyo Night", dark: true },
+  { id: "rose-pine", label: "Rosé Pine", dark: true },
+  { id: "gruvbox", label: "Gruvbox", dark: true },
+  { id: "dracula", label: "Dracula", dark: true },
+  { id: "nord", label: "Nord", dark: true },
+  { id: "ayu", label: "Ayu", dark: true },
+]
 
 export type Scope = { kind: "smart"; id: SmartView } | { kind: "list"; id: string }
 
