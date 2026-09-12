@@ -263,7 +263,7 @@ async def run_daily_review(
     started = time.monotonic()
     result = await agent.run("\n".join(parts))
     if on_usage:
-        await on_usage(_report("daily", agent.model, result.usage(), started))
+        await on_usage(_report("daily", agent.model, result.usage, started))
     return result.output
 
 
@@ -287,7 +287,7 @@ async def run_weekly_review(
     started = time.monotonic()
     result = await agent.run("\n".join(parts))
     if on_usage:
-        await on_usage(_report("weekly", agent.model, result.usage(), started))
+        await on_usage(_report("weekly", agent.model, result.usage, started))
     return result.output
 
 
@@ -306,7 +306,7 @@ async def run_monthly_review(
     started = time.monotonic()
     result = await agent.run("\n".join(parts))
     if on_usage:
-        await on_usage(_report("monthly", agent.model, result.usage(), started))
+        await on_usage(_report("monthly", agent.model, result.usage, started))
     return result.output
 
 
@@ -319,7 +319,7 @@ async def run_task_decomposition(
         f"Today is {today.isoformat()}. Goal: {title}\n" + (f"Details: {description}" if description else "")
     )
     if on_usage:
-        await on_usage(_report("decompose", agent.model, result.usage(), started))
+        await on_usage(_report("decompose", agent.model, result.usage, started))
     return result.output
 
 
@@ -330,7 +330,7 @@ async def run_capture(
     started = time.monotonic()
     result = await agent.run(f"Today is {today.isoformat()}.\n\n{text[:4000]}")
     if on_usage:
-        await on_usage(_report("capture", agent.model, result.usage(), started))
+        await on_usage(_report("capture", agent.model, result.usage, started))
     return result.output
 
 
@@ -341,7 +341,7 @@ async def run_briefing(
     started = time.monotonic()
     result = await agent.run(f"--- MORNING DATA ---\n{deps}")
     if on_usage:
-        await on_usage(_report("briefing", agent.model, result.usage(), started))
+        await on_usage(_report("briefing", agent.model, result.usage, started))
     return result.output
 
 
@@ -368,7 +368,7 @@ async def stream_ask(
     async with agent.run_stream(render_ask_prompt(deps)) as result:
         async for text in result.stream_text(debounce_by=0.1):
             yield text
-        usage = result.usage()
+        usage = result.usage
     if on_usage:
         await on_usage(_report("ask", agent.model, usage, started))
 
@@ -389,7 +389,7 @@ async def stream_assist(
     async with agent.run_stream(render_assist_prompt(deps)) as result:
         async for text in result.stream_text(debounce_by=0.1):
             yield text
-        usage = result.usage()
+        usage = result.usage
     if on_usage:
         await on_usage(_report("assist", agent.model, usage, started))
 
@@ -415,7 +415,7 @@ async def stream_daily_review(
     async with agent.run_stream("\n".join(parts)) as result:
         async for partial in result.stream_output(debounce_by=0.2):
             yield partial
-        usage = result.usage()
+        usage = result.usage
     if on_usage:
         await on_usage(_report("daily", agent.model, usage, started))
 
@@ -429,7 +429,7 @@ async def stream_briefing(
     async with agent.run_stream(f"--- MORNING DATA ---\n{deps}") as result:
         async for partial in result.stream_output(debounce_by=0.2):
             yield partial
-        usage = result.usage()
+        usage = result.usage
     if on_usage:
         await on_usage(_report("briefing", agent.model, usage, started))
 

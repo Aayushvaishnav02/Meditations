@@ -4,6 +4,7 @@ prompt overrides, fast-model routing and usage telemetry."""
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import json
 from contextlib import asynccontextmanager
 
@@ -279,3 +280,43 @@ def test_resilient_stream_does_not_retry_after_yield(monkeypatch):
     with pytest.raises(ModelHTTPError):
         asyncio.run(consume())
     assert model.wrapped.calls == 1  # no silent stream restart
+
+
+# --- usage reporting through the REAL pydantic-ai machinery (TestModel, no network) ---
+def test_stream_ask_reports_usage(monkeypatch):
+    """Regression: result.usage is a property on pydantic-ai results — calling it
+    crashed every streaming runner right after the answer finished."""
+    from pydantic_ai.models.test import TestModel
+
+    reports = []
+
+    async def on_usage(report):
+        reports.append(report)
+
+    async def consume():
+        async for _ in agents.stream_ask(
+            agents.AskDeps(question="q", context="", history=[]), model=TestModel(), on_usage=on_usage
+        ):
+            pass
+
+    asyncio.run(consume())
+    assert len(reports) == 1 and reports[0].agent == "ask"
+    assert reports[0].input_tokens > 0
+
+
+def test_run_daily_reports_usage(monkeypatch):
+    from pydantic_ai.models.test import TestModel
+
+    reports = []
+
+    async def on_usage(report):
+        reports.append(report)
+
+    asyncio.run(
+        agents.run_daily_review(
+            agents.DailyDeps(day=dt.date(2026, 9, 10), today_raw="text"),
+            model=TestModel(),
+            on_usage=on_usage,
+        )
+    )
+    assert len(reports) == 1 and reports[0].agent == "daily"
