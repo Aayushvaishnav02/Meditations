@@ -34,6 +34,7 @@ optional AI against any OpenAI-compatible endpoint (defaults to a local Ollama).
 backend/    FastAPI + SQLite (WAL) + FTS5 + sqlite-vec + PydanticAI agents
 frontend/   React 19 + Vite + Tailwind v4 + shadcn/Base-UI + TipTap + Tauri v2 shell
 systemd/    user timers for nightly/weekly/monthly AI rollups
+setup.sh    install backend + frontend dependencies (once per clone)
 dev.sh      launch backend + frontend for development (see Quick start)
 ```
 
@@ -44,13 +45,13 @@ and Node **20.19+ or 22.12+** (required by Vite 8). Nothing else.
 
 ```bash
 git clone <repo> && cd Journal
-./dev.sh   # first run installs backend + frontend deps, then starts both
+./setup.sh   # once per clone — installs backend (.venv via uv sync) + frontend (npm install)
+./dev.sh     # backend :8000 + frontend :5173; Ctrl-C stops both
 ```
 
-`dev.sh` runs `uv sync` / `npm install` only when deps are missing, refuses to
-start over an occupied port (kill the stale instance with `fuser -k <port>/tcp`)
-instead of letting Vite drift ports, and picks another pair with
-`BACKEND_PORT=8001 FRONTEND_PORT=5174 ./dev.sh`. Flags: `--backend` /
+`dev.sh` refuses to start over an occupied port (kill the stale instance with
+`fuser -k <port>/tcp`) instead of letting Vite drift ports, and picks another
+pair with `BACKEND_PORT=8001 FRONTEND_PORT=5174 ./dev.sh`. Flags: `--backend` /
 `--frontend` for a single service. The SQLite DB (`backend/data/journal.db`)
 and its schema are created on first backend start.
 
