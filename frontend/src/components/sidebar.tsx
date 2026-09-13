@@ -143,11 +143,17 @@ export function Sidebar() {
 
   return (
     <aside className="glass flex w-60 shrink-0 flex-col gap-4 border-r-[var(--glass-border)] p-3">
-      <div className="flex items-center gap-2 px-2 pt-2">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-primary/20 text-primary ring-1 ring-primary/40">
-          <ListTodo className="size-4" />
-        </div>
-        <span className="font-semibold">Journal</span>
+      <div className="flex items-center gap-2.5 px-2 pt-2">
+        <img
+          src="/favicon.svg"
+          alt="Meditations"
+          title="Meditations"
+          draggable={false}
+          className="size-7 select-none rounded-lg"
+        />
+        <span className="text-sm font-semibold tracking-tight text-foreground select-none">
+          Meditations
+        </span>
         <span
           className={cn(
             "ml-auto size-2 rounded-full transition-colors",

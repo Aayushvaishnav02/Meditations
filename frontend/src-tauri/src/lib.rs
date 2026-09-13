@@ -26,12 +26,12 @@ pub fn run() {
             }
 
             // system tray: show/quit
-            let show = MenuItem::with_id(app, "show", "Show Journal", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show Meditations", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[show, quit])?;
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("Journal")
+                .tooltip("Meditations")
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => show_main(app),

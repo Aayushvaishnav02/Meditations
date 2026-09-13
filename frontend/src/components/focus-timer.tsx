@@ -77,7 +77,7 @@ export function FocusTimer() {
     if (timer.open && timer.running) {
       document.title = `${display} · ${phaseLabel}`
     } else {
-      document.title = "Journal"
+      document.title = "Meditations"
     }
   }, [timer.open, timer.running, display, phaseLabel])
 

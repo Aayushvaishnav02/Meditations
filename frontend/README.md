@@ -1,6 +1,6 @@
-# Journal Frontend
+# Meditations Frontend
 
-React 19 + Vite + Tailwind v4 + shadcn/ui (Base UI) frontend for the Journal life-OS.
+React 19 + Vite + Tailwind v4 + shadcn/ui (Base UI) frontend for the Meditations life-OS.
 
 ## Run
 

@@ -402,7 +402,7 @@ export function SettingsView() {
         </div>
         <Separator />
         <p className="text-xs text-muted-foreground">
-          Journal · local-first task, journal and AI life-OS. Backend API at{" "}
+          Meditations · local-first tasks, journal and AI life-OS. Backend API at{" "}
           <code className="text-foreground">http://127.0.0.1:8000</code>.
         </p>
       </div>
