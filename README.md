@@ -36,9 +36,22 @@ optional AI against any OpenAI-compatible endpoint (defaults to a local Ollama).
 backend/    FastAPI + SQLite (WAL) + FTS5 + sqlite-vec + PydanticAI agents
 frontend/   React 19 + Vite + Tailwind v4 + shadcn/Base-UI + TipTap + Tauri v2 shell
 systemd/    user timers for nightly/weekly/monthly AI rollups
+dev.sh      launch backend + frontend for development (see Quick start)
 ```
 
 ## Quick start (dev)
+
+```bash
+./dev.sh   # backend :8000 + frontend :5173 in one terminal; Ctrl-C stops both
+```
+
+Refuses to start over an occupied port (kill the stale instance with
+`fuser -k <port>/tcp`) instead of letting Vite drift ports; picks another pair
+with `BACKEND_PORT=8001 FRONTEND_PORT=5174 ./dev.sh`. Flags: `--backend` /
+`--frontend` for a single service. Needs `uv` (or an existing
+`backend/.venv`) and `npm`.
+
+Manual equivalent:
 
 ```bash
 # 1. backend — API on :8000
