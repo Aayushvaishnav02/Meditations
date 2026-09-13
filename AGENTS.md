@@ -139,13 +139,20 @@ npm run tauri dev | build                      # desktop shell (needs rust + web
 - Agent tests MUST NOT hit the network: monkeypatch the runner functions in
   `app/agents.py`, or pass pydantic-ai's `TestModel`. The semantic-search tests
   stub `embed_texts` — never initialize the real fastembed model in tests.
-- The Tauri Rust shell cannot compile in this environment. Review
-  `frontend/src-tauri/src/lib.rs` against the published plugin APIs instead.
+- The Tauri Rust shell compiles via the vendored sysroot in `.tauri-sysroot/`
+  (rustup toolchain + Fedora RPMs extracted with `.tauri-sysroot/extract.sh`).
+  Build with `RUSTUP_HOME=$PWD/.tauri-sysroot/rustup
+  CARGO_HOME=$PWD/.tauri-sysroot/cargo PATH=$PWD/.tauri-sysroot/cargo/bin:$PATH
+  PKG_CONFIG_PATH=$PWD/.tauri-sysroot/root/usr/lib64/pkgconfig:$PWD/.tauri-sysroot/root/usr/share/pkgconfig
+  npm run tauri build` from `frontend/`. The bundler needs `libappindicator`
+  resolvable via pkg-config (`appindicator3-0.1` + `dbusmenu-glib-0.4` pc
+  files) even for deb/rpm targets.
 
 ## Known deferred work
 
 - `recurrence_rule` RRULE subset only (DAILY/WEEKLY/INTERVAL/BYDAY).
 - Timezone-aware scheduling (currently naive-UTC; display converts client-side).
-- Tauri build never compiled (no toolchain); `cargo check` is the first step.
+- AppImage bundling not yet produced (deb + rpm build; AppImage needs the
+  linuxdeploy download step verified).
 - Reorder endpoint reindexes without clamping to siblings outside the payload.
 - `tauri.conf.json` CSP is `null`; a strict CSP is a future hardening step.
