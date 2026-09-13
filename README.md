@@ -39,20 +39,25 @@ dev.sh      launch backend + frontend for development (see Quick start)
 
 ## Quick start (dev)
 
+Prerequisites: [uv](https://docs.astral.sh/uv/) (it fetches Python 3.12 itself)
+and Node **20.19+ or 22.12+** (required by Vite 8). Nothing else.
+
 ```bash
-./dev.sh   # backend :8000 + frontend :5173 in one terminal; Ctrl-C stops both
+git clone <repo> && cd Journal
+./dev.sh   # first run installs backend + frontend deps, then starts both
 ```
 
-Refuses to start over an occupied port (kill the stale instance with
-`fuser -k <port>/tcp`) instead of letting Vite drift ports; picks another pair
-with `BACKEND_PORT=8001 FRONTEND_PORT=5174 ./dev.sh`. Flags: `--backend` /
-`--frontend` for a single service. Needs `uv` (or an existing
-`backend/.venv`) and `npm`.
+`dev.sh` runs `uv sync` / `npm install` only when deps are missing, refuses to
+start over an occupied port (kill the stale instance with `fuser -k <port>/tcp`)
+instead of letting Vite drift ports, and picks another pair with
+`BACKEND_PORT=8001 FRONTEND_PORT=5174 ./dev.sh`. Flags: `--backend` /
+`--frontend` for a single service. The SQLite DB (`backend/data/journal.db`)
+and its schema are created on first backend start.
 
 Manual equivalent:
 
 ```bash
-# 1. backend — API on :8000
+# 1. backend — API on :8000 (creates .venv from uv.lock; idempotent)
 cd backend && uv sync && uv run uvicorn app.main:app --reload
 
 # 2. frontend — UI on :5173

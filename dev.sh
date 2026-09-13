@@ -29,6 +29,16 @@ refuse_busy_port() {
 (( RUN_BACKEND )) && port_busy "$BACKEND_PORT" && refuse_busy_port "$BACKEND_PORT" 8001 5174
 (( RUN_FRONTEND )) && port_busy "$FRONTEND_PORT" && refuse_busy_port "$FRONTEND_PORT" 8001 5174
 
+# One-time bootstrap: fresh clones get their deps installed on first launch.
+if (( RUN_BACKEND )) && [[ ! -x "$ROOT/backend/.venv/bin/uvicorn" ]]; then
+  echo "dev.sh: backend deps missing — running 'uv sync' (fetches Python 3.12 if needed)…"
+  (cd "$ROOT/backend" && uv sync)
+fi
+if (( RUN_FRONTEND )) && [[ ! -d "$ROOT/frontend/node_modules" ]]; then
+  echo "dev.sh: frontend deps missing — running 'npm install'…"
+  (cd "$ROOT/frontend" && npm install)
+fi
+
 PIDS=()
 READY_PID=""
 cleanup() {
