@@ -8,6 +8,15 @@ CACHE="$BASE/cache/tauri"
 APPPARENT="$BASE/../frontend/src-tauri/target/release/bundle/appimage"
 APPDIR="$APPPARENT/Meditations.AppDir"
 
+# Self-provision bundler tools: tauri pins an old linuxdeploy whose bundled
+# `strip` rejects modern .relr.dyn sections, and its downloader times out —
+# fetch the current continuous build ourselves instead
+mkdir -p "$CACHE"
+fetch() { [ -f "$CACHE/$1" ] || { curl -fL --retry 3 -o "$CACHE/$1" "$2" && chmod +x "$CACHE/$1"; }; }
+fetch "linuxdeploy-x86_64.AppImage" "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
+fetch "AppRun-x86_64" "https://github.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-x86_64"
+fetch "linuxdeploy-plugin-gtk.sh" "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh"
+
 [ -d "$APPDIR" ] || { echo "AppDir missing - run the tauri build first"; exit 1; }
 mkdir -p "$APPDIR/usr/lib"
 
