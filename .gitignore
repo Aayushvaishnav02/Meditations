@@ -46,3 +46,7 @@ Thumbs.db
 .tauri-sysroot/*
 !.tauri-sysroot/extract.sh
 !.tauri-sysroot/build-appimage.sh
+
+
+.nobs/
+plan.md
