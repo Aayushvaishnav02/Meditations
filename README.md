@@ -5,8 +5,6 @@ journaling** (TipTap markdown), and a **hierarchical AI compaction system**
 (PydanticAI). Everything runs on your machine: SQLite storage, local-first API,
 optional AI against any OpenAI-compatible endpoint (defaults to a local Ollama).
 
-> The full architecture deep-dive lives in `plan.md` (kept locally, not in the
-> repository).
 
 ## Features
 
