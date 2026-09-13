@@ -52,8 +52,13 @@ git clone <repo> && cd Journal
 `dev.sh` refuses to start over an occupied port (kill the stale instance with
 `fuser -k <port>/tcp`) instead of letting Vite drift ports, and picks another
 pair with `BACKEND_PORT=8001 FRONTEND_PORT=5174 ./dev.sh`. Flags: `--backend` /
-`--frontend` for a single service. The SQLite DB (`backend/data/journal.db`)
-and its schema are created on first backend start.
+`--frontend` for a single service. If a previous session left services behind:
+`pkill -f 'uvicorn app.main:app'; pkill -f 'node_modules/.bin/vite'`. The SQLite
+DB (`backend/data/journal.db`) and its schema are created on first backend
+start.
+
+Re-run `./setup.sh` any time `uv.lock` / `package-lock.json` change — both
+installers are idempotent.
 
 Manual equivalent:
 
