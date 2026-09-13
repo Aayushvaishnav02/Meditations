@@ -42,5 +42,7 @@ Thumbs.db
 *.swo
 .nobs/
 
-# Local toolchain sysroot for Tauri build
-.tauri-sysroot/
+# Local toolchain sysroot for Tauri build (keep the setup scripts)
+.tauri-sysroot/*
+!.tauri-sysroot/extract.sh
+!.tauri-sysroot/build-appimage.sh

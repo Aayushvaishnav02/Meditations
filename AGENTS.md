@@ -146,13 +146,15 @@ npm run tauri dev | build                      # desktop shell (needs rust + web
   PKG_CONFIG_PATH=$PWD/.tauri-sysroot/root/usr/lib64/pkgconfig:$PWD/.tauri-sysroot/root/usr/share/pkgconfig
   npm run tauri build` from `frontend/`. The bundler needs `libappindicator`
   resolvable via pkg-config (`appindicator3-0.1` + `dbusmenu-glib-0.4` pc
-  files) even for deb/rpm targets.
+  files) even for deb/rpm targets. For the AppImage, run
+  `.tauri-sysroot/build-appimage.sh` afterwards: linuxdeploy can't see
+  non-system libs, so it seeds the AppDir with the webkit closure and uses a
+  current linuxdeploy (the one pinned by tauri bundles an old `strip` that
+  rejects `.relr.dyn`).
 
 ## Known deferred work
 
 - `recurrence_rule` RRULE subset only (DAILY/WEEKLY/INTERVAL/BYDAY).
 - Timezone-aware scheduling (currently naive-UTC; display converts client-side).
-- AppImage bundling not yet produced (deb + rpm build; AppImage needs the
-  linuxdeploy download step verified).
 - Reorder endpoint reindexes without clamping to siblings outside the payload.
 - `tauri.conf.json` CSP is `null`; a strict CSP is a future hardening step.
