@@ -36,6 +36,8 @@ src-tauri/target/
 # OS & IDE Metadata
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
+*Zone.Identifier*
 .idea/
 .vscode/
 *.swp

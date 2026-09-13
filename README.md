@@ -1,9 +1,17 @@
+<p align="center">
+  <img src="Assets/icon.png" alt="Meditations Icon" width="96" height="96" />
+</p>
+
 # Meditations — local-first life-OS
 
 A single local app that combines **TickTick-grade task management**, **reflective
 journaling** (TipTap markdown), and a **hierarchical AI compaction system**
 (PydanticAI). Everything runs on your machine: SQLite storage, local-first API,
 optional AI against any OpenAI-compatible endpoint (defaults to a local Ollama).
+
+<p align="center">
+  <img src="Assets/journal1.png" alt="Meditations Journal & Daily Telemetry" />
+</p>
 
 
 ## Features
@@ -27,6 +35,38 @@ optional AI against any OpenAI-compatible endpoint (defaults to a local Ollama).
   components are neutral, never punitive.
 - **Desktop shell** — Tauri v2 with system tray (show/quit) and a
   `Super+Shift+A` global shortcut that focuses the app from anywhere.
+
+## Screenshots
+
+### Tasks — List View
+Natural-language capture, AI daily briefing ("Good morning — Top 3 for today"), priority flags, duration badges, and grouped sections (Overdue, Today, Upcoming).
+
+![Tasks List View](Assets/list.png)
+
+### Tasks — Kanban Board
+Drag-and-drop task status workflow across To Do, In Progress, and Done, with integrated Pomodoro and Stopwatch focus timer.
+
+![Tasks Kanban Board](Assets/board.png)
+
+### Tasks — Calendar View
+Month schedule view with drag-and-drop task rescheduling and focus clock integration.
+
+![Tasks Calendar View](Assets/calendar.png)
+
+### Reflective Journaling — Calendar & Mood History
+Month overview of journal entries with mood and energy indicators to visualize consistency and emotional trajectory over time.
+
+![Journal Calendar View](Assets/journal2.png)
+
+### Second Brain — Hybrid Search & AI Q&A
+Natural-language Q&A and semantic search across personal journals combining SQLite FTS5 and sqlite-vec embeddings, with citations linked to source entries.
+
+![Second Brain Q&A](Assets/sb.png)
+
+### Insights & Telemetry Dashboard
+Telemetry dashboard featuring deterministic daily score trends, completion rates, deep work hours, mood charts, and habit streaks.
+
+![Insights Dashboard](Assets/insights.png)
 
 ## Layout
 
