@@ -94,15 +94,20 @@ fn spawn_backend(app: &tauri::AppHandle, port: u16) -> Option<CommandChild> {
                         CommandEvent::Stdout(line) | CommandEvent::Stderr(line) => {
                             log::info!("[backend] {}", String::from_utf8_lossy(&line).trim_end());
                         }
-                        CommandEvent::Terminated(status) => {
-                            log::warn!("[backend] terminated: {status:?}");
+                        CommandEvent::Error(err) => log::warn!("[backend] {err}"),
+                        // Terminated and any future lifecycle events: detach
+                        // the UI from the dead port so the frontend falls back
+                        other => {
+                            log::warn!("[backend] stopped or errored; detaching port");
                             if let Some(state) = handle.try_state::<BackendState>() {
                                 if let Ok(mut port) = state.port.lock() {
                                     *port = None;
                                 }
                             }
+                            let _ = other;
                         }
-                        CommandEvent::Error(err) => log::warn!("[backend] {err}"),
+                            }
+                        }
                     }
                 }
             });
