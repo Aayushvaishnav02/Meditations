@@ -10,6 +10,10 @@ runnable standalone for debugging an installed app:
 from __future__ import annotations
 
 import os
+
+# frozen apps have no source on disk: pydantic plugins (logfire, via pydantic-ai)
+# call inspect.getsource() at model creation and crash PyInstaller builds
+os.environ.setdefault("PYDANTIC_DISABLE_PLUGINS", "1")
 import threading
 
 
