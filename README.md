@@ -78,9 +78,13 @@ setup.sh    install backend + frontend dependencies (once per clone)
 dev.sh      launch backend + frontend for development (see Quick start)
 ```
 
+The desktop shell is a webview over the local API, so start the backend first
+(`./dev.sh`, or `cd backend && uv run uvicorn app.main:app`) — the app expects
+it on `http://127.0.0.1:8000`.
+
 ## Install (Linux releases)
 
-Prebuilt bundles ship via [GitHub Releases](https://github.com/Aayushvaishnav02/Meditations/releases):
+Prebuilt, self-contained bundles ship via [GitHub Releases](https://github.com/Aayushvaishnav02/Meditations/releases):
 
 ```bash
 # Fedora / RHEL
@@ -93,9 +97,10 @@ sudo apt install ./Meditations_*.deb
 chmod +x Meditations_*.AppImage && ./Meditations_*.AppImage
 ```
 
-The desktop shell is a webview over the local API, so start the backend first
-(`./dev.sh`, or `cd backend && uv run uvicorn app.main:app`) — the app expects
-it on `http://127.0.0.1:8000`.
+The backend ships inside the app (PyInstaller sidecar) — no Python required.
+Data lives in `~/.local/share/dev.journal.app/journal.db`; set
+`MEDITATIONS_LEGACY_DB=/path/to/backend/data/journal.db` before first launch
+to import an existing dev database.
 
 ## Quick start (dev)
 
@@ -142,6 +147,12 @@ in `app_settings`. Details in `backend/README.md`.
 ```
 
 ## Desktop app (Tauri v2)
+
+`npm run tauri dev` / `npm run tauri build` need the PyInstaller sidecar built
+first — `./build-sidecar.sh` (CI builds it automatically). In dev the sidecar
+is not spawned and the app talks to `./dev.sh`'s backend on :8000; packaged
+builds spawn it on a free loopback port with the DB in
+`~/.local/share/dev.journal.app/journal.db`.
 
 ### With a native toolchain (recommended)
 

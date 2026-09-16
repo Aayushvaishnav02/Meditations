@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000"
+import { backendBase } from "@/lib/backend-base"
 
 export class ApiError extends Error {
   readonly status: number
@@ -12,7 +12,7 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response
   try {
-    res = await fetch(`${BASE}/api${path}`, {
+    res = await fetch(`${backendBase()}/api${path}`, {
       headers: { "Content-Type": "application/json" },
       ...init,
     })
