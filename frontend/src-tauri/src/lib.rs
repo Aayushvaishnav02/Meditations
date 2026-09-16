@@ -106,8 +106,6 @@ fn spawn_backend(app: &tauri::AppHandle, port: u16) -> Option<CommandChild> {
                             }
                             let _ = other;
                         }
-                            }
-                        }
                     }
                 }
             });
