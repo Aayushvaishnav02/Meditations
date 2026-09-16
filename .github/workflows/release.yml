@@ -92,7 +92,15 @@ jobs:
 
       - name: Build only (branch push or manual run)
         if: startsWith(github.ref, 'refs/heads/')
-        run: npm run tauri build
+        # emit compile/bundler errors as annotations (readable via the public
+        # checks API when logs need admin rights)
+        run: |
+          npm run tauri build 2>&1 | tee /tmp/build.log > /dev/null
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            grep -E "^error(\[|:)|error: " -A 6 /tmp/build.log | head -c 6000 | fold -w 3000 | sed 's/^/::error::/'
+          fi
+          exit $rc
         working-directory: frontend
 
       - name: Upload build artifacts (branch push or manual run)
