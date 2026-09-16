@@ -68,26 +68,86 @@ jobs:
 
       - name: Build and draft release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: tauri-apps/tauri-action@v0
+        # same proven invocation as the branch path; tauri-action died
+        # unintrospectably here, so the draft release is handled explicitly
+        run: |
+          set +e
+          npm run tauri build > /tmp/build.log 2>&1
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "build exit=$rc"
+            tail -c 5500 /tmp/build.log | fold -w 700 | tail -9 | sed 's/^/::error::/'
+          fi
+          exit $rc
+        working-directory: frontend
+
+      - name: Create draft release and upload bundles
+        if: startsWith(github.ref, 'refs/tags/')
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          projectPath: frontend
-          tagName: ${{ github.ref_name }}
-          releaseName: "Meditations ${{ github.ref_name }}"
-          releaseBody: |
-            Linux x86_64 builds of Meditations — the backend is bundled, no Python needed.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'EOF'
+          import glob, json, os, urllib.request
 
-            **Fedora / RHEL** — `sudo dnf install ./Meditations_*.rpm`
-            **Debian / Ubuntu** — `sudo apt install ./Meditations_*.deb`
-            **Any distro** — `chmod +x Meditations_*.AppImage && ./Meditations_*.AppImage`
-            (needs libfuse2; Fedora: `sudo dnf install fuse`, or run with `--appimage-extract-and-run`)
+          repo, tag, token = os.environ["REPO"], os.environ["TAG"], os.environ["GH_TOKEN"]
+          api = f"https://api.github.com/repos/{repo}"
+          up = f"https://uploads.github.com/repos/{repo}"
+          H = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
+               "User-Agent": "release-upload"}
 
-            Data lives in `~/.local/share/dev.journal.app/journal.db`. To import an
-            existing dev database, set `MEDITATIONS_LEGACY_DB=/path/to/backend/data/journal.db`
-            before first launch.
-          releaseDraft: true
-          prerelease: false
+          def req(url, method="GET", data=None, headers=None):
+              h = headers or H
+              r = urllib.request.Request(url, method=method, data=data, headers=h)
+              with urllib.request.urlopen(r) as resp:
+                  body = resp.read()
+                  return json.loads(body) if body else {}
+
+          body = """Linux x86_64 builds of Meditations — the backend is bundled, no Python needed.
+
+          **Fedora / RHEL** — `sudo dnf install ./Meditations_*.rpm`
+          **Debian / Ubuntu** — `sudo apt install ./Meditations_*.deb`
+          **Any distro** — `chmod +x Meditations_*.AppImage && ./Meditations_*.AppImage`
+          (needs libfuse2; Fedora: `sudo dnf install fuse`, or run with `--appimage-extract-and-run`)
+
+          Data lives in `~/.local/share/dev.journal.app/journal.db`. To import an
+          existing dev database, set `MEDITATIONS_LEGACY_DB=/path/to/backend/data/journal.db`
+          before first launch (stop the dev backend first — the import is skipped
+          while `-wal`/`-shm` sidecars exist)."""
+
+          releases = req(f"{api}/releases?per_page=100")
+          mine = [r for r in releases if r.get("draft") and r.get("tag_name") == tag]
+          release = None
+          for stale in mine:  # reuse the newest draft, delete older stale ones
+              if release is None:
+                  release = stale
+              else:
+                  req(f"{api}/releases/{stale['id']}", method="DELETE")
+                  print("deleted stale draft", stale["id"])
+          payload = {"tag_name": tag, "name": f"Meditations {tag}", "draft": True, "body": body}
+          if release is None:
+              release = req(f"{api}/releases", method="POST", data=json.dumps(payload).encode(),
+                            headers={**H, "Content-Type": "application/json"})
+          else:
+              release = req(f"{api}/releases/{release['id']}", method="PATCH",
+                            data=json.dumps({"body": body, "name": f"Meditations {tag}"}).encode(),
+                            headers={**H, "Content-Type": "application/json"})
+          rid = release["id"]
+
+          assets = req(f"{api}/releases/{rid}/assets")
+          existing = {a["name"]: a["id"] for a in assets}
+          for pattern in ("appimage/*.AppImage", "deb/*.deb", "rpm/*.rpm"):
+              for path in glob.glob(f"frontend/src-tauri/target/release/bundle/{pattern}"):
+                  name = os.path.basename(path)
+                  if name in existing:  # replace stale asset from a previous run
+                      req(f"{api}/releases/assets/{existing[name]}", method="DELETE")
+                  with open(path, "rb") as f:
+                      req(f"{up}/releases/{rid}/assets?name={name}", method="POST",
+                          data=f.read(), headers={**H, "Content-Type": "application/octet-stream"})
+                  print("uploaded", name)
+          print("DRAFT READY: release id", rid)
+          EOF
 
       - name: Build only (branch push or manual run)
         if: startsWith(github.ref, 'refs/heads/')
