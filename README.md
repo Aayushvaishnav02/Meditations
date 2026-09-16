@@ -203,6 +203,18 @@ cd frontend && npm run tauri build -- --bundles deb,rpm
 bash .tauri-sysroot/build-appimage.sh
 ```
 
+Fast local Rust check against the vendored sysroot (seconds, no CI round-trip;
+tauri-build requires the resources path to exist, hence the stub):
+
+```bash
+mkdir -p frontend/src-tauri/binaries/meditations-backend \
+  && touch frontend/src-tauri/binaries/meditations-backend/meditations-backend
+cd frontend/src-tauri
+CARGO_HOME=$PWD/../../.tauri-sysroot/cargo \
+PKG_CONFIG_PATH="$PWD/../../.tauri-sysroot/root/usr/lib64/pkgconfig:$PWD/../../.tauri-sysroot/root/usr/share/pkgconfig" \
+PATH="$PWD/../../.tauri-sysroot/root/usr/bin:$PATH" cargo check
+```
+
 Gotchas baked into this flow (see `AGENTS.md` for the full list):
 
 - the Tauri bundler resolves `libappindicator` via pkg-config even for deb/rpm
