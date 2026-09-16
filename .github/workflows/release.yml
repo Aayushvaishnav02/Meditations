@@ -10,10 +10,16 @@ permissions:
 
 jobs:
   build-linux:
-    # ubuntu-22.04 is the oldest runner providing webkit2gtk-4.1: artifacts link
-    # against glibc 2.35 and avoid the .relr.dyn/strip issue newer toolchains hit
-    runs-on: ubuntu-22.04
+    # The ubuntu-22.04 runner label is retired (Sept 2026), so run inside an
+    # ubuntu:22.04 container on the current runner instead: keeps the glibc
+    # 2.35 baseline for older distros and old binutils (no default .relr.dyn
+    # sections, which the tauri-pinned linuxdeploy's strip cannot handle)
+    runs-on: ubuntu-24.04
+    container: ubuntu:22.04
     steps:
+      - name: Bootstrap git (minimal container image)
+        run: apt-get update && apt-get install -y git
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
@@ -30,8 +36,8 @@ jobs:
 
       - name: Install Tauri Linux dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          apt-get update
+          apt-get install -y \
             libwebkit2gtk-4.1-dev build-essential curl wget file \
             libxdo-dev libssl-dev libdbus-1-dev \
             libayatana-appindicator3-dev librsvg2-dev
@@ -81,5 +87,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-bundles
-          path: frontend/src-tauri/target/release/bundle/**
+          path: |
+            frontend/src-tauri/target/release/bundle/appimage/*.AppImage
+            frontend/src-tauri/target/release/bundle/deb/*.deb
+            frontend/src-tauri/target/release/bundle/rpm/*.rpm
           if-no-files-found: error
