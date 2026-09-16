@@ -158,7 +158,8 @@ pub fn run() {
                 if let Some(state) = app_handle.try_state::<BackendState>() {
                     if let Ok(mut guard) = state.child.lock() {
                         if let Some(child) = guard.take() {
-                            let _ = tauri::async_runtime::block_on(child.kill());
+                            // kill() is synchronous in tauri-plugin-shell
+                            let _ = child.kill();
                         }
                     }
                 }
