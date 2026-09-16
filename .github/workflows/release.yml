@@ -3,7 +3,6 @@ name: Release (Linux)
 on:
   push:
     tags: ["app-v*"]
-    branches: ["feat/backend-sidecar"] # TEMP: validation runs; drop before tagging
   workflow_dispatch: # build only, no release — test the pipeline before tagging
 
 permissions:
