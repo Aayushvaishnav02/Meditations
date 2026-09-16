@@ -51,6 +51,17 @@ jobs:
             exit 1
           fi
 
+      # one-dir PyInstaller bundle; must exist before tauri bundles resources
+      - name: Build backend sidecar
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          cd backend
+          uv sync
+          uv pip install pyinstaller
+          uv run pyinstaller sidecar.spec --noconfirm --distpath ../frontend/src-tauri/binaries
+          test -x ../frontend/src-tauri/binaries/meditations-backend/meditations-backend
+
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
@@ -65,25 +76,37 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Meditations ${{ github.ref_name }}"
           releaseBody: |
-            Linux x86_64 builds of Meditations.
+            Linux x86_64 builds of Meditations — the backend is bundled, no Python needed.
 
             **Fedora / RHEL** — `sudo dnf install ./Meditations_*.rpm`
             **Debian / Ubuntu** — `sudo apt install ./Meditations_*.deb`
             **Any distro** — `chmod +x Meditations_*.AppImage && ./Meditations_*.AppImage`
             (needs libfuse2; Fedora: `sudo dnf install fuse`, or run with `--appimage-extract-and-run`)
 
-            The desktop shell talks to the local API — have the backend running on
-            `http://127.0.0.1:8000` (`cd backend && uv run uvicorn app.main:app`).
+            Data lives in `~/.local/share/dev.journal.app/journal.db`. To import an
+            existing dev database, set `MEDITATIONS_LEGACY_DB=/path/to/backend/data/journal.db`
+            before first launch.
           releaseDraft: true
           prerelease: false
 
-      - name: Build only (manual run)
-        if: github.event_name == 'workflow_dispatch'
-        run: npm run tauri build
+      - name: Build only (branch push or manual run)
+        if: startsWith(github.ref, 'refs/heads/')
+        # emit the build log tail as annotations (readable via the public
+        # checks API when logs need admin rights); set +e so the dump runs
+        # even though GitHub starts this shell with -e
+        run: |
+          set +e
+          npm run tauri build > /tmp/build.log 2>&1
+          rc=$?
+          echo "build exit=$rc log_size=$(wc -c < /tmp/build.log) disk: $(df -h / | tail -1 | awk '{print $4" free"}')"
+          { grep -vE "   Compiling|   Downloaded|   Blocking" /tmp/build.log | tail -c 3800
+            echo "---raw tail---"
+            tail -c 1400 /tmp/build.log; } | fold -w 700 | tail -9 | sed 's/^/::error::/'
+          exit $rc
         working-directory: frontend
 
-      - name: Upload build artifacts (manual run)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Upload build artifacts (branch push or manual run)
+        if: startsWith(github.ref, 'refs/heads/')
         uses: actions/upload-artifact@v4
         with:
           name: linux-bundles

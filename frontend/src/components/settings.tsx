@@ -38,6 +38,7 @@ import {
   useTestAI,
 } from "@/hooks/api"
 import { THEMES, useUi, type Theme } from "@/stores/ui"
+import { backendBase } from "@/lib/backend-base"
 import { cn } from "cn"
 
 function Card({ title, icon: Icon, children }: { title: string; icon: typeof Bot; children: React.ReactNode }) {
@@ -402,8 +403,10 @@ export function SettingsView() {
         </div>
         <Separator />
         <p className="text-xs text-muted-foreground">
-          Meditations · local-first tasks, journal and AI life-OS. Backend API at{" "}
-          <code className="text-foreground">http://127.0.0.1:8000</code>.
+          Meditations · local-first tasks, journal and AI life-OS. Backend API:{" "}
+          <code className="text-foreground">{backendBase()}</code>
+          {!("__TAURI_INTERNALS__" in window) && " (dev fallback — the desktop app picks a port at launch)"}
+          .
         </p>
       </div>
     </div>

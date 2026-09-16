@@ -3,13 +3,14 @@
  * Uses a plain POST + ReadableStream (EventSource can't send bodies).
  * Yields {event, data} pairs with data parsed as JSON; `signal` aborts.
  */
+import { backendBase } from "@/lib/backend-base"
+
 export async function* sseEvents(
   path: string,
   body: unknown,
   signal?: AbortSignal,
 ): AsyncGenerator<{ event: string; data: any }> {
-  const BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000"
-  const res = await fetch(`${BASE}/api${path}`, {
+  const res = await fetch(`${backendBase()}/api${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
