@@ -17,13 +17,13 @@ fn show_main(app: &tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            // log in release builds too — the tray/shortcut warnings below
+            // must be visible when a packaged app misbehaves
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .build(),
+            )?;
 
             // system tray: show/quit — non-fatal: on desktops without an
             // appindicator runtime the tray can't be created, and that must
