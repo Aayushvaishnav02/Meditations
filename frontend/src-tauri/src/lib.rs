@@ -25,11 +25,13 @@ pub fn run() {
                 )?;
             }
 
-            // system tray: show/quit
+            // system tray: show/quit — non-fatal: on desktops without an
+            // appindicator runtime the tray can't be created, and that must
+            // not keep the app from starting
             let show = MenuItem::with_id(app, "show", "Show Meditations", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
-            TrayIconBuilder::new()
+            if let Err(err) = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .tooltip("Meditations")
                 .menu(&menu)
@@ -38,10 +40,13 @@ pub fn run() {
                     "quit" => app.exit(0),
                     _ => {}
                 })
-                .build(app)?;
+                .build(app)
+            {
+                log::warn!("system tray unavailable: {err}");
+            }
 
             // Super+Shift+A: quick add — focus the app from anywhere
-            app.handle().plugin(
+            if let Err(err) = app.handle().plugin(
                 ShortcutBuilder::new()
                     .with_shortcuts(["super+shift+a"])?
                     .with_handler(|app, _shortcut, event| {
@@ -50,7 +55,9 @@ pub fn run() {
                         }
                     })
                     .build(),
-            )?;
+            ) {
+                log::warn!("global shortcut unavailable: {err}");
+            }
 
             Ok(())
         })
