@@ -17,19 +17,21 @@ fn show_main(app: &tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            // log in release builds too — the tray/shortcut warnings below
+            // must be visible when a packaged app misbehaves
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(log::LevelFilter::Info)
+                    .build(),
+            )?;
 
-            // system tray: show/quit
+            // system tray: show/quit — non-fatal: on desktops without an
+            // appindicator runtime the tray can't be created, and that must
+            // not keep the app from starting
             let show = MenuItem::with_id(app, "show", "Show Meditations", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
-            TrayIconBuilder::new()
+            if let Err(err) = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .tooltip("Meditations")
                 .menu(&menu)
@@ -38,10 +40,13 @@ pub fn run() {
                     "quit" => app.exit(0),
                     _ => {}
                 })
-                .build(app)?;
+                .build(app)
+            {
+                log::warn!("system tray unavailable: {err}");
+            }
 
             // Super+Shift+A: quick add — focus the app from anywhere
-            app.handle().plugin(
+            if let Err(err) = app.handle().plugin(
                 ShortcutBuilder::new()
                     .with_shortcuts(["super+shift+a"])?
                     .with_handler(|app, _shortcut, event| {
@@ -50,7 +55,9 @@ pub fn run() {
                         }
                     })
                     .build(),
-            )?;
+            ) {
+                log::warn!("global shortcut unavailable: {err}");
+            }
 
             Ok(())
         })
