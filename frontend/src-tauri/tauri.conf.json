@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Meditations",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "dev.journal.app",
   "build": {
     "frontendDist": "../dist",
@@ -27,8 +27,14 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["appimage", "deb", "rpm"],
-    "resources": ["binaries/meditations-backend"],
+    "targets": [
+      "appimage",
+      "deb",
+      "rpm"
+    ],
+    "resources": [
+      "binaries/meditations-backend"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -38,7 +44,11 @@
     ],
     "linux": {
       "rpm": {
-        "depends": ["webkit2gtk4.1", "gtk3", "libayatana-appindicator-gtk3"]
+        "depends": [
+          "webkit2gtk4.1",
+          "gtk3",
+          "libayatana-appindicator-gtk3"
+        ]
       }
     },
     "android": {

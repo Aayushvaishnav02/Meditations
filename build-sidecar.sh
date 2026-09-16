@@ -6,5 +6,6 @@ set -e
 cd "$(dirname "$0")/backend"
 uv sync
 uv pip install pyinstaller
+rm -rf build  # stale PyInstaller analysis cache silently drops spec changes
 uv run pyinstaller sidecar.spec --noconfirm --distpath ../frontend/src-tauri/binaries
 echo "sidecar ready: frontend/src-tauri/binaries/meditations-backend/"
