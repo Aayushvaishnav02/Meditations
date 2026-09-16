@@ -92,17 +92,15 @@ jobs:
 
       - name: Build only (branch push or manual run)
         if: startsWith(github.ref, 'refs/heads/')
-        # emit compile/bundler errors as annotations (readable via the public
-        # checks API when logs need admin rights)
+        # emit the build log tail as annotations (readable via the public
+        # checks API when logs need admin rights); set +e so the dump runs
+        # even though GitHub starts this shell with -e
         run: |
-          set -o pipefail
-          npm run tauri build 2>&1 | tee /tmp/build.log > /dev/null
+          set +e
+          npm run tauri build > /tmp/build.log 2>&1
           rc=$?
-          if [ $rc -ne 0 ]; then
-            { grep -E "^[Ee]rror|error\[|panicked|failed to bundle" -A 4 /tmp/build.log | tail -c 4500
-              echo "--- last log lines ---"
-              tail -40 /tmp/build.log; } | fold -w 2900 | sed 's/^/::error::/'
-          fi
+          echo "build exit=$rc log_size=$(wc -c < /tmp/build.log)"
+          tail -c 6000 /tmp/build.log | fold -w 2900 | sed 's/^/::error::/'
           exit $rc
         working-directory: frontend
 
