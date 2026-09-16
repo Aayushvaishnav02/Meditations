@@ -103,7 +103,7 @@ pub fn run() {
                     .local_addr()
                     .expect("local addr")
                     .port();
-                let child = spawn_backend(app, port);
+                let child = spawn_backend(app.handle(), port);
                 if !wait_for_port(port, Duration::from_secs(15)) {
                     log::warn!("backend not reachable on :{port} after 15s");
                 }
