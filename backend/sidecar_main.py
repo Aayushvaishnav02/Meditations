@@ -10,12 +10,27 @@ runnable standalone for debugging an installed app:
 from __future__ import annotations
 
 import os
+import threading
+
+
+def _watch_parent() -> None:
+    """Exit when the desktop shell dies, even on SIGKILL — prevents an
+    orphaned backend holding the DB and its port after a shell crash."""
+    import time
+
+    parent = os.getppid()
+    while True:
+        time.sleep(2)
+        if os.getppid() != parent:
+            os._exit(0)
 
 
 def main() -> None:
     import uvicorn
 
     from app.main import app
+
+    threading.Thread(target=_watch_parent, daemon=True).start()
 
     uvicorn.run(
         app,

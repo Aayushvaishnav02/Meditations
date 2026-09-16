@@ -100,7 +100,9 @@ chmod +x Meditations_*.AppImage && ./Meditations_*.AppImage
 The backend ships inside the app (PyInstaller sidecar) — no Python required.
 Data lives in `~/.local/share/dev.journal.app/journal.db`; set
 `MEDITATIONS_LEGACY_DB=/path/to/backend/data/journal.db` before first launch
-to import an existing dev database.
+to import an existing dev database (stop the dev backend first — the import
+is skipped while `-wal`/`-shm` sidecars exist). Semantic search works out of
+the box; the embedding model (~100 MB) downloads to `~/.cache` on first use.
 
 ## Quick start (dev)
 

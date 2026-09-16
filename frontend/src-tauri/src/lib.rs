@@ -19,15 +19,16 @@ fn show_main(app: &tauri::AppHandle) {
     }
 }
 
-/// Port the sidecar listens on (None in dev: the backend runs via ./dev.sh).
+/// Port the sidecar listens on; None in dev (backend via ./dev.sh on :8000)
+/// or whenever the sidecar isn't running (failed spawn / died).
 struct BackendState {
-    port: Option<u16>,
+    port: Mutex<Option<u16>>,
     child: Mutex<Option<CommandChild>>,
 }
 
 #[tauri::command]
 fn backend_port(state: State<'_, BackendState>) -> Option<u16> {
-    state.port
+    state.port.lock().ok().and_then(|guard| *guard)
 }
 
 fn wait_for_port(port: u16, timeout: Duration) -> bool {
@@ -46,29 +47,62 @@ fn spawn_backend(app: &tauri::AppHandle, port: u16) -> Option<CommandChild> {
     let _ = std::fs::create_dir_all(&db_dir);
     let db_path = db_dir.join("journal.db");
 
-    // one-time, non-destructive import of a legacy dev database
+    // one-time, non-destructive import of a legacy dev database; skipped when
+    // WAL sidecars exist (uncheckpointed writes + torn-copy risk)
     if !db_path.exists() {
         if let Ok(legacy) = std::env::var("MEDITATIONS_LEGACY_DB") {
-            if let Err(err) = std::fs::copy(&legacy, &db_path) {
+            let legacy = std::path::PathBuf::from(legacy);
+            let wal = std::path::PathBuf::from(format!("{}-wal", legacy.display()));
+            let shm = std::path::PathBuf::from(format!("{}-shm", legacy.display()));
+            if wal.exists() || shm.exists() {
+                log::warn!(
+                    "legacy db {} has WAL sidecars — stop the dev backend so it \
+                     checkpoints, then retry the import",
+                    legacy.display()
+                );
+            } else if let Err(err) = std::fs::copy(&legacy, &db_path) {
                 log::warn!("legacy db import failed: {err}");
             }
         }
     }
 
+    // the sidecar is a bundled resource directory, NOT an externalBin sibling
+    // of the executable — resolve it from the resource dir
+    let bin = match app.path().resource_dir() {
+        Ok(dir) => dir.join("binaries").join("meditations-backend").join("meditations-backend"),
+        Err(err) => {
+            log::warn!("resource dir unavailable: {err}");
+            return None;
+        }
+    };
     let result = tauri::async_runtime::block_on(async {
         app.shell()
-            .sidecar("meditations-backend")?
+            .command(&bin)
             .env("MEDITATIONS_PORT", port.to_string())
             .env("JOURNAL_DB_PATH", db_path.to_string_lossy().to_string())
             .spawn()
     });
     match result {
         Ok((mut rx, child)) => {
-            // drain sidecar output into the log so its stdout pipe never fills
+            let handle = app.clone();
+            // drain sidecar output into the log so its stdout pipe never
+            // fills; watch for unexpected death and detach the UI from the
+            // dead port
             tauri::async_runtime::spawn(async move {
                 while let Some(event) = rx.recv().await {
-                    if let CommandEvent::Stdout(line) | CommandEvent::Stderr(line) = event {
-                        log::info!("[backend] {}", String::from_utf8_lossy(&line).trim_end());
+                    match event {
+                        CommandEvent::Stdout(line) | CommandEvent::Stderr(line) => {
+                            log::info!("[backend] {}", String::from_utf8_lossy(&line).trim_end());
+                        }
+                        CommandEvent::Terminated(status) => {
+                            log::warn!("[backend] terminated: {status:?}");
+                            if let Some(state) = handle.try_state::<BackendState>() {
+                                if let Ok(mut port) = state.port.lock() {
+                                    *port = None;
+                                }
+                            }
+                        }
+                        CommandEvent::Error(err) => log::warn!("[backend] {err}"),
                     }
                 }
             });
@@ -94,9 +128,11 @@ pub fn run() {
                     .build(),
             )?;
 
-            // sidecar backend on a free loopback port; dev uses ./dev.sh on :8000
-            let (port, child) = if cfg!(dev) {
-                (None, None)
+            // sidecar backend on a free loopback port; dev uses ./dev.sh on :8000.
+            // bind(0) then drop has a small TOCTOU race — acceptable for a
+            // desktop app, uvicorn would fail loudly and flip port to None
+            let spawned = if cfg!(dev) {
+                None
             } else {
                 let port = TcpListener::bind(("127.0.0.1", 0))
                     .expect("bind loopback")
@@ -104,13 +140,19 @@ pub fn run() {
                     .expect("local addr")
                     .port();
                 let child = spawn_backend(app.handle(), port);
-                if !wait_for_port(port, Duration::from_secs(15)) {
+                if child.is_some() && !wait_for_port(port, Duration::from_secs(15)) {
                     log::warn!("backend not reachable on :{port} after 15s");
                 }
-                (Some(port), child)
+                // only publish the port when the child actually spawned;
+                // otherwise the UI would cache a dead URL
+                child.map(|child| (port, child))
+            };
+            let (port, child) = match spawned {
+                Some((port, child)) => (Some(port), Some(child)),
+                None => (None, None),
             };
             app.manage(BackendState {
-                port,
+                port: Mutex::new(port),
                 child: Mutex::new(child),
             });
 
