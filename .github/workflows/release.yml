@@ -99,8 +99,10 @@ jobs:
           set +e
           npm run tauri build > /tmp/build.log 2>&1
           rc=$?
-          echo "build exit=$rc log_size=$(wc -c < /tmp/build.log)"
-          tail -c 6000 /tmp/build.log | fold -w 2900 | sed 's/^/::error::/'
+          echo "build exit=$rc log_size=$(wc -c < /tmp/build.log) disk: $(df -h / | tail -1 | awk '{print $4" free"}')"
+          { grep -vE "   Compiling|   Downloaded|   Blocking" /tmp/build.log | tail -c 3800
+            echo "---raw tail---"
+            tail -c 1400 /tmp/build.log; } | fold -w 700 | tail -9 | sed 's/^/::error::/'
           exit $rc
         working-directory: frontend
 
