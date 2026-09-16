@@ -78,6 +78,25 @@ setup.sh    install backend + frontend dependencies (once per clone)
 dev.sh      launch backend + frontend for development (see Quick start)
 ```
 
+## Install (Linux releases)
+
+Prebuilt bundles ship via [GitHub Releases](https://github.com/Aayushvaishnav02/Meditations/releases):
+
+```bash
+# Fedora / RHEL
+sudo dnf install ./Meditations_*.rpm
+
+# Debian / Ubuntu
+sudo apt install ./Meditations_*.deb
+
+# Any distro (needs libfuse2 — Fedora: sudo dnf install fuse)
+chmod +x Meditations_*.AppImage && ./Meditations_*.AppImage
+```
+
+The desktop shell is a webview over the local API, so start the backend first
+(`./dev.sh`, or `cd backend && uv run uvicorn app.main:app`) — the app expects
+it on `http://127.0.0.1:8000`.
+
 ## Quick start (dev)
 
 Prerequisites: [uv](https://docs.astral.sh/uv/) (it fetches Python 3.12 itself)
