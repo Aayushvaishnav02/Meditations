@@ -95,10 +95,13 @@ jobs:
         # emit compile/bundler errors as annotations (readable via the public
         # checks API when logs need admin rights)
         run: |
+          set -o pipefail
           npm run tauri build 2>&1 | tee /tmp/build.log > /dev/null
           rc=$?
           if [ $rc -ne 0 ]; then
-            grep -E "^error(\[|:)|error: " -A 6 /tmp/build.log | head -c 6000 | fold -w 3000 | sed 's/^/::error::/'
+            { grep -E "^[Ee]rror|error\[|panicked|failed to bundle" -A 4 /tmp/build.log | tail -c 4500
+              echo "--- last log lines ---"
+              tail -40 /tmp/build.log; } | fold -w 2900 | sed 's/^/::error::/'
           fi
           exit $rc
         working-directory: frontend
