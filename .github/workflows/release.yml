@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-24.04
     container: ubuntu:22.04
     steps:
-      - name: Bootstrap git (minimal container image)
-        run: apt-get update && apt-get install -y git
+      - name: Bootstrap git + curl (minimal container image; rustup needs curl)
+        run: apt-get update && apt-get install -y git curl ca-certificates
 
       - uses: actions/checkout@v4
 
